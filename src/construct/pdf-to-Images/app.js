@@ -8,7 +8,7 @@ const readFile = promisify(fs.readFile);
 
 exports.lambdaHandler = async (event, context) => {
     console.log(JSON.stringify(event));
-    const srcBucket = event.bucket;
+    const srcBucket = process.env['PdfSourceBucket'];
     const srcKey = event.key;
 
     const destKeyPrefix = decodeURI(srcKey).replace('.pdf', '');

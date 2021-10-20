@@ -89,6 +89,11 @@
       "type": "runtime"
     },
     {
+      "name": "@aws-cdk/aws-stepfunctions-tasks",
+      "version": "^1.128.0",
+      "type": "runtime"
+    },
+    {
       "name": "@aws-cdk/aws-stepfunctions",
       "version": "^1.128.0",
       "type": "runtime"

@@ -13,6 +13,7 @@
     "deploy": "npx projen deploy",
     "destroy": "npx projen destroy",
     "diff": "npx projen diff",
+    "deploy-hotswap": "npx projen deploy-hotswap",
     "upgrade": "npx projen upgrade",
     "upgrade-projen": "npx projen upgrade-projen",
     "projen": "npx projen"
@@ -41,6 +42,7 @@
     "@aws-cdk/aws-lambda": "^1.128.0",
     "@aws-cdk/aws-s3": "^1.128.0",
     "@aws-cdk/aws-stepfunctions": "^1.128.0",
+    "@aws-cdk/aws-stepfunctions-tasks": "^1.128.0",
     "@aws-cdk/core": "^1.128.0"
   },
   "bundledDependencies": [],
