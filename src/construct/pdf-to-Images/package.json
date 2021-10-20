@@ -1,0 +1,14 @@
+{
+  "name": "pdf-to-images",
+  "version": "1.0.0",
+  "description": "pdf to images",
+  "main": "app.js",
+  "repository": "https://github.com/wongcyrus/DocumentsSetTextract/tree/master/documents-set-textract",
+  "author": "SAM CLI",
+  "license": "MIT",
+  "dependencies": {
+    "gm": "^1.23.1",
+    "node-gs": "^0.1.1",
+    "pdf2img-lambda-friendly": "2.0.0"
+  }
+}
