@@ -2,54 +2,79 @@ const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 const fs = require('fs');
 const { promisify } = require('util');
-const pdf2img = require('./pdf2img');
-
+const PDFDocument = require('/opt/node_modules/pdfkit');
 const readFile = promisify(fs.readFile);
+const path = require('path');
 
 exports.lambdaHandler = async (event, context) => {
     console.log(JSON.stringify(event));
-    const srcBucket = process.env['PdfSourceBucket'];
-    const srcKey = event.key;
+    const pdf = '/tmp/' + event.srcKey;
+    rmDir(path.dirname(pdf));
+    fs.mkdirSync(path.dirname(pdf), { recursive: true });
+    const images = [...Array(event.numberOfImages).keys()].map((x, y) => {
+        return {
+            key: event.imagePrefix + (y + 1) + '.png',
+            file: '/tmp/' + (y + 1) + '.png',
+        };
+    });
 
-    const destKeyPrefix = decodeURI(srcKey).replace('.pdf', '');
-    const outputDirectory = '/tmp/' + destKeyPrefix;
-    fs.existsSync(outputDirectory) || fs.mkdirSync(outputDirectory, { recursive: true });
-    const filePath = '/tmp/' + decodeURI(srcKey);
-    await s3download(srcBucket, srcKey, filePath);
-
-    const stats = fs.statSync(filePath);
-    console.log('File Size in Bytes:- ' + stats.size);
-    const results = await convert2images(filePath, '/tmp');
-    console.log(results);
-
-    const s3Results = await Promise.all(
-        results.map(async (c) => {
-            console.log(c);
-            let data = await readFile(c.path);
-            let key = srcKey.replace('.pdf', '') + '/' + c.path.replace('/tmp/', '');
-            return await s3
-                .putObject({
-                    Bucket: process.env['ImagesBucket'],
-                    Key: key,
-                    Body: data,
-                    ContentType: 'image/png',
-                })
-                .promise();
-        }),
+    await Promise.all(
+      images.map(async c => await s3download(process.env['ImagesBucket'], c.key, c.file)),
     );
-    console.log(s3Results);
-    const images = results.map((c) => c.path.replace('/tmp/', ''));
 
-    return {
-        srcBucket,
-        srcKey,
-        imagePrefix:
-            srcKey.replace('.pdf', '') + '/' + images[0].replace('1.png', ''),
-        numberOfImages: images.length,
-    };
+    await combineImagesToPdf(images, pdf);
+    const stats = fs.statSync(pdf);
+    console.log('File Size in Bytes:- ' + stats.size);
+    const data = await readFile(pdf);
+    await s3
+      .putObject({
+          Bucket: process.env['ImagesBucket'],
+          Key: event.srcKey,
+          Body: data,
+          ContentType: 'application/pdf',
+      })
+      .promise();
+
+    return event;
 };
 
-const s3download = (bucketName, keyName, localDest) => {
+const combineImagesToPdf = (images, pdf) => {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument();
+        const pdfStream = fs.createWriteStream(pdf);
+        doc.pipe(pdfStream);
+        console.log(images);
+        for (let i = 0; i < images.length; i++) {
+            let image = images[i];
+            console.log(image.file);
+            const stats = fs.statSync(image.file);
+            console.log('Image Size in Bytes:- ' + stats.size);
+            console.log(doc.page.height, doc.page.width);
+
+            if (i === 0) {
+                doc.image(image.file, 0, 0, {
+                    width: doc.page.width,
+                    height: doc.page.height,
+                    align: 'center',
+                    valign: 'center',
+                });
+            } else {
+                doc.addPage().image(image.file, 0, 0, {
+                    width: doc.page.width,
+                    height: doc.page.height,
+                    align: 'center',
+                    valign: 'center',
+                });
+            }
+        }
+        doc.end();
+        pdfStream.addListener('finish', function () {
+            resolve(pdf);
+        });
+    });
+};
+
+const s3download = async (bucketName, keyName, localDest) => {
     if (typeof localDest == 'undefined') {
         localDest = keyName;
     }
@@ -57,27 +82,26 @@ const s3download = (bucketName, keyName, localDest) => {
         Bucket: bucketName,
         Key: keyName,
     };
-    let file = fs.createWriteStream(localDest);
-
-    return new Promise((resolve, reject) => {
-        s3.getObject(params)
-            .createReadStream()
-            .on('end', () => {
-                return resolve();
-            })
-            .on('error', (error) => {
-                return reject(error);
-            })
-            .pipe(file);
-    });
+    const data = await s3.getObject(params).promise();
+    fs.writeFileSync(localDest, data.Body);
 };
 
-const convert2images = async (filePath, outputdir) => {
-    pdf2img.setOptions({
-        type: 'png', // png or jpg, default jpg
-        density: 600, // default 600
-        outputdir, // output folder, default null (if null given, then it will create folder name same as file name)
-        outputname: 'p', // output file name, dafault null (if null given, then it will create image name same as input name)
-    });
-    return await pdf2img.convert(filePath);
+const rmDir = (dirPath) => {
+    let files = [];
+    try {
+        files = fs.readdirSync(dirPath);
+    } catch (e) {
+        return;
+    }
+    if (files.length > 0) {
+        for (let i = 0; i < files.length; i++) {
+            let filePath = dirPath + '/' + files[i];
+            if (fs.statSync(filePath).isFile()) {
+                fs.unlinkSync(filePath);
+            } else {
+                rmDir(filePath);
+            }
+        }
+    }
+    if (dirPath !== "/tmp") fs.rmdirSync(dirPath);
 };

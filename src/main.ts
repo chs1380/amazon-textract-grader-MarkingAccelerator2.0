@@ -1,5 +1,5 @@
 import { App, Construct, Stack, StackProps } from '@aws-cdk/core';
-import { CorrectPdfOrientationConstruct } from './construct/correct-pdf-orientation';
+import { CorrectPdfOrientationConstruct } from './construct/correct-pdf-orientation-construct';
 
 export class AmazonTextractGraderStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps = {}) {
