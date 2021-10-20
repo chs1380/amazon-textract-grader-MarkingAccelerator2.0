@@ -60,7 +60,7 @@ const detectText = async (images) => {
       const resultKey = key.replace(".png", "_text.json");
       await s3
         .putObject({
-          Bucket: process.env["TextractBucket"],
+          Bucket: process.env["ImagesBucket"],
           Key: resultKey,
           Body: JSON.stringify(result),
           ContentType: "application/json",
