@@ -19,7 +19,7 @@ exports.lambdaHandler = async (event, context) => {
   });
 
   await Promise.all(
-    images.map(async c => s3download(process.env['ImagesBucket'], c.key, c.file)),
+    images.map(async c => await s3download(process.env['ImagesBucket'], c.key, c.file)),
   );
 
   await combineImagesToPdf(images, pdf);
@@ -74,7 +74,7 @@ const combineImagesToPdf = (images, pdf) => {
   });
 };
 
-const s3download = (bucketName, keyName, localDest) => {
+const s3download = async (bucketName, keyName, localDest) => {
   if (typeof localDest == 'undefined') {
     localDest = keyName;
   }
@@ -82,19 +82,8 @@ const s3download = (bucketName, keyName, localDest) => {
     Bucket: bucketName,
     Key: keyName,
   };
-  let file = fs.createWriteStream(localDest);
-
-  return new Promise((resolve, reject) => {
-    s3.getObject(params)
-      .createReadStream()
-      .on('end', () => {
-        return resolve();
-      })
-      .on('error', (error) => {
-        return reject(error);
-      })
-      .pipe(file);
-  });
+  const data = await s3.getObject(params).promise();
+  fs.writeFileSync(localDest, data.Body);
 };
 
 const rmDir = (dirPath) => {
