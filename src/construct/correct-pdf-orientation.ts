@@ -15,7 +15,7 @@ export class CorrectPdfOrientationConstruct extends Construct {
     super(scope, id);
     console.log(props.prefix);
 
-    this.pdfSourceBucket = new Bucket(this, 'ImageBucket', {
+    this.pdfSourceBucket = new Bucket(this, 'PdfSourceBucket', {
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY,
     });
