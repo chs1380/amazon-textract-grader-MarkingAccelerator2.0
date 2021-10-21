@@ -28,7 +28,7 @@ exports.lambdaHandler = async (event, context) => {
   const data = await readFile(pdf);
   await s3
     .putObject({
-      Bucket: process.env['ImagesBucket'],
+      Bucket: process.env['PdfDestinationBucket'],
       Key: event.srcKey,
       Body: data,
       ContentType: 'application/pdf',

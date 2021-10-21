@@ -6,7 +6,7 @@ import * as sfn from '@aws-cdk/aws-stepfunctions';
 import { Wait } from '@aws-cdk/aws-stepfunctions';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
 import { WaitTime } from '@aws-cdk/aws-stepfunctions/lib/states/wait';
-import { Construct, Duration, RemovalPolicy } from '@aws-cdk/core';
+import { CfnOutput, Construct, Duration, RemovalPolicy } from '@aws-cdk/core';
 
 
 export interface CorrectPdfOrientationConstructProps {
@@ -16,12 +16,17 @@ export interface CorrectPdfOrientationConstructProps {
 export class CorrectPdfOrientationConstruct extends Construct {
   public readonly pdfSourceBucket: Bucket;
   private imageBucket: Bucket;
+  public readonly pdfDestinationBucket: Bucket;
 
   constructor(scope: Construct, id: string, props: CorrectPdfOrientationConstructProps = {}) {
     super(scope, id);
     console.log(props.prefix);
 
     this.pdfSourceBucket = new Bucket(this, 'PdfSourceBucket', {
+      autoDeleteObjects: true,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+    this.pdfDestinationBucket = new Bucket(this, 'PdfDestinationBucket', {
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY,
     });
@@ -35,10 +40,10 @@ export class CorrectPdfOrientationConstruct extends Construct {
     });
 
     //Source https://github.com/shelfio/ghostscript-lambda-layer
-    const ghostscriptLayer = this.getLayerVersion('GhostscriptLayer', 'layer/ghostscript/ghostscript.zip');
-    const imageMagickLayer = this.getLayerVersion('ImageMagickLayer', 'layer/image-magick/layer.zip');
-    const sharpLayer = this.getLayerVersion('SharpLayer', 'layer/sharp/');
-    const pdfkitLayer = this.getLayerVersion('PdfkitLayer', 'layer/pdfkit/');
+    const ghostscriptLayer = this.getLayerVersion('GhostscriptLayer', 'ghostscript/ghostscript.zip');
+    const imageMagickLayer = this.getLayerVersion('ImageMagickLayer', 'image-magick/layer.zip');
+    const sharpLayer = this.getLayerVersion('SharpLayer', 'sharp/');
+    const pdfkitLayer = this.getLayerVersion('PdfkitLayer', 'pdfkit/');
 
     const pdfToImagesFunction = this.getFunction('PdfToImagesFunction', 'pdf-to-Images/',
       [ghostscriptLayer, imageMagickLayer]);
@@ -73,6 +78,14 @@ export class CorrectPdfOrientationConstruct extends Construct {
       definition,
       timeout: Duration.minutes(15),
     });
+
+    new CfnOutput(this, 'PdfSourceBucketOutput', {
+      value: this.pdfSourceBucket.bucketName,
+    });
+
+    new CfnOutput(this, 'PdfDestinationBucketOutput', {
+      value: this.pdfDestinationBucket.bucketName,
+    });
   }
 
   private getLayerVersion(name: string, assetPath: string) {
@@ -80,7 +93,7 @@ export class CorrectPdfOrientationConstruct extends Construct {
       compatibleRuntimes: [
         lambda.Runtime.NODEJS_14_X,
       ],
-      code: Code.fromAsset(path.join(__dirname, assetPath)),
+      code: Code.fromAsset(path.join(__dirname, 'lambda/layer', assetPath)),
     });
   }
 
@@ -90,11 +103,12 @@ export class CorrectPdfOrientationConstruct extends Construct {
       memorySize: 1024,
       timeout: Duration.minutes(15),
       handler: 'app.lambdaHandler',
-      code: Code.fromAsset(path.join(__dirname, assetPath)),
+      code: Code.fromAsset(path.join(__dirname, 'lambda', assetPath)),
       layers: layers,
       environment: {
         ImagesBucket: this.imageBucket.bucketName,
         PdfSourceBucket: this.pdfSourceBucket.bucketName,
+        PdfDestinationBucket: this.pdfDestinationBucket.bucketName,
       },
     });
   }
