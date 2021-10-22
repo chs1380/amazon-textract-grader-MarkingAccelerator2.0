@@ -6,6 +6,9 @@ const project = new AwsCdkTypeScriptApp({
   cdkDependencies: [
     '@aws-cdk/aws-s3',
     '@aws-cdk/aws-lambda',
+    '@aws-cdk/aws-sns',
+    '@aws-cdk/aws-sns-subscriptions',
+    '@aws-cdk/aws-iam',
     '@aws-cdk/aws-stepfunctions',
     '@aws-cdk/aws-stepfunctions-tasks',
   ], /* Which AWS CDK modules (those that start with "@aws-cdk/") this app uses. */

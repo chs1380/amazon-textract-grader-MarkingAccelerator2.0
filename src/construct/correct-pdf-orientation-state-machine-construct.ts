@@ -3,33 +3,28 @@ import * as lambda from '@aws-cdk/aws-lambda';
 import { Code, IFunction, ILayerVersion, Runtime } from '@aws-cdk/aws-lambda';
 import { Bucket } from '@aws-cdk/aws-s3';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
-import { Wait } from '@aws-cdk/aws-stepfunctions';
+import { StateMachine, Wait } from '@aws-cdk/aws-stepfunctions';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
 import { WaitTime } from '@aws-cdk/aws-stepfunctions/lib/states/wait';
-import { CfnOutput, Construct, Duration, RemovalPolicy } from '@aws-cdk/core';
+import { Construct, Duration, RemovalPolicy } from '@aws-cdk/core';
 
 
-export interface CorrectPdfOrientationConstructProps {
-  prefix?: string;
+export interface CorrectPdfOrientationStateMachineConstructProps {
+  pdfSourceBucket: Bucket;
+  pdfDestinationBucket: Bucket;
 }
 
-export class CorrectPdfOrientationConstruct extends Construct {
+export class CorrectPdfOrientationStateMachineConstruct extends Construct {
   public readonly pdfSourceBucket: Bucket;
   private imageBucket: Bucket;
   public readonly pdfDestinationBucket: Bucket;
+  public readonly stateMachine: StateMachine;
 
-  constructor(scope: Construct, id: string, props: CorrectPdfOrientationConstructProps = {}) {
+  constructor(scope: Construct, id: string, props: CorrectPdfOrientationStateMachineConstructProps) {
     super(scope, id);
-    console.log(props.prefix);
 
-    this.pdfSourceBucket = new Bucket(this, 'PdfSourceBucket', {
-      autoDeleteObjects: true,
-      removalPolicy: RemovalPolicy.DESTROY,
-    });
-    this.pdfDestinationBucket = new Bucket(this, 'PdfDestinationBucket', {
-      autoDeleteObjects: true,
-      removalPolicy: RemovalPolicy.DESTROY,
-    });
+    this.pdfSourceBucket = props.pdfSourceBucket;
+    this.pdfDestinationBucket = props.pdfDestinationBucket;
 
     this.imageBucket = new Bucket(this, 'ImageBucket', {
       autoDeleteObjects: true,
@@ -74,17 +69,9 @@ export class CorrectPdfOrientationConstruct extends Construct {
         time: WaitTime.duration(Duration.seconds(5)),
       }))
       .next(imagesToPdfTask);
-    new sfn.StateMachine(this, 'StateMachine', {
+    this.stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definition,
-      timeout: Duration.minutes(15),
-    });
-
-    new CfnOutput(this, 'PdfSourceBucketOutput', {
-      value: this.pdfSourceBucket.bucketName,
-    });
-
-    new CfnOutput(this, 'PdfDestinationBucketOutput', {
-      value: this.pdfDestinationBucket.bucketName,
+      timeout: Duration.minutes(180),
     });
   }
 

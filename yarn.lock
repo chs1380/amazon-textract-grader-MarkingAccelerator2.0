@@ -372,7 +372,7 @@
     "@aws-cdk/custom-resources" "1.128.0"
     constructs "^3.3.69"
 
-"@aws-cdk/aws-iam@1.128.0":
+"@aws-cdk/aws-iam@1.128.0", "@aws-cdk/aws-iam@^1.128.0":
   version "1.128.0"
   resolved "https://registry.yarnpkg.com/@aws-cdk/aws-iam/-/aws-iam-1.128.0.tgz#3d50e0b6c0138b9d4e47b07453d6ce29b7107bf2"
   integrity sha512-1pF73b4mjEO3jPcXFq53C4uYUXdncnWgS4gqcdtDr02XG26s2yR6YJHqwMjPY5Qg3onbw8E1glKfREu5+UhXTQ==
@@ -548,7 +548,7 @@
     "@aws-cdk/core" "1.128.0"
     constructs "^3.3.69"
 
-"@aws-cdk/aws-sns-subscriptions@1.128.0":
+"@aws-cdk/aws-sns-subscriptions@1.128.0", "@aws-cdk/aws-sns-subscriptions@^1.128.0":
   version "1.128.0"
   resolved "https://registry.yarnpkg.com/@aws-cdk/aws-sns-subscriptions/-/aws-sns-subscriptions-1.128.0.tgz#c0a915095843827e70dd49501347f54b8228a6da"
   integrity sha512-DLLEcsRbtzKvB4cz9DkTByMg5ERGbf7veJjtPJlNHJCoTB/qydjWgLjiYiOQBkkVobWatkQtNdLnG9dB5/PjwQ==
@@ -561,7 +561,7 @@
     "@aws-cdk/core" "1.128.0"
     constructs "^3.3.69"
 
-"@aws-cdk/aws-sns@1.128.0":
+"@aws-cdk/aws-sns@1.128.0", "@aws-cdk/aws-sns@^1.128.0":
   version "1.128.0"
   resolved "https://registry.yarnpkg.com/@aws-cdk/aws-sns/-/aws-sns-1.128.0.tgz#1f70cf006368e674b9f6c9c07f5459869f5c2cc4"
   integrity sha512-z7IsuBrNQZQb3JZXSORcAevu4Bl0cc7D2YVsX/yoy1KT89G8Cxz0KcACyoUt/GEB4y4Imxw9IJJpBFS9rBXQew==
