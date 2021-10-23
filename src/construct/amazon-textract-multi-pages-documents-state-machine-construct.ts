@@ -34,7 +34,6 @@ export class AmazonTextractMultiPagesDocumentsStateMachineConstruct extends Cons
       actions: ['SNS:Publish'],
     }));
 
-
     const runAmazonTextract = new tasks.CallAwsService(this, 'RunAmazonTextract', {
       service: 'textract',
       action: 'startDocumentAnalysis',
@@ -97,7 +96,6 @@ export class AmazonTextractMultiPagesDocumentsStateMachineConstruct extends Cons
       errors: ['States.DataLimitExceeded'],
       resultPath: '$.error-info',
     });
-
 
     const wait = new Wait(this, 'Wait 1 minute', {
       comment: 'Wait 1 minute\'',

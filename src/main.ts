@@ -2,6 +2,7 @@ import { Bucket } from '@aws-cdk/aws-s3';
 import { App, CfnOutput, Construct, RemovalPolicy, Stack, StackProps } from '@aws-cdk/core';
 import { AmazonTextractMultiPagesDocumentsStateMachineConstruct } from './construct/amazon-textract-multi-pages-documents-state-machine-construct';
 import { CorrectPdfOrientationStateMachineConstruct } from './construct/correct-pdf-orientation-state-machine-construct';
+import { TransformFormResultStateMachineConstruct } from './construct/transform-form-result-state-machine-construct';
 
 export class AmazonTextractGraderStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps = {}) {
@@ -21,6 +22,11 @@ export class AmazonTextractGraderStack extends Stack {
     });
     new AmazonTextractMultiPagesDocumentsStateMachineConstruct(this, 'AmazonTextractMultiPagesDocumentsStateMachineConstruct', {
       pdfSourceBucket,
+      destinationBucket: pdfDestinationBucket,
+    });
+
+    new TransformFormResultStateMachineConstruct(this, 'TransformFormResultStateMachineConstruct', {
+      sourceBucket: pdfDestinationBucket,
       destinationBucket: pdfDestinationBucket,
     });
 

@@ -1,12 +1,10 @@
-import path from 'path';
-import * as lambda from '@aws-cdk/aws-lambda';
-import { Code, IFunction, ILayerVersion, Runtime } from '@aws-cdk/aws-lambda';
+import { ILayerVersion } from '@aws-cdk/aws-lambda';
 import { Bucket } from '@aws-cdk/aws-s3';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import { StateMachine, Wait } from '@aws-cdk/aws-stepfunctions';
-import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
 import { WaitTime } from '@aws-cdk/aws-stepfunctions/lib/states/wait';
 import { Construct, Duration, RemovalPolicy } from '@aws-cdk/core';
+import { LambdaHelper } from './lib/lambda-helper';
 
 
 export interface CorrectPdfOrientationStateMachineConstructProps {
@@ -19,10 +17,12 @@ export class CorrectPdfOrientationStateMachineConstruct extends Construct {
   private imageBucket: Bucket;
   public readonly pdfDestinationBucket: Bucket;
   public readonly stateMachine: StateMachine;
+  private readonly lambdaHelper: LambdaHelper;
 
   constructor(scope: Construct, id: string, props: CorrectPdfOrientationStateMachineConstructProps) {
     super(scope, id);
 
+    this.lambdaHelper = new LambdaHelper(this);
     this.pdfSourceBucket = props.pdfSourceBucket;
     this.pdfDestinationBucket = props.pdfDestinationBucket;
 
@@ -35,32 +35,32 @@ export class CorrectPdfOrientationStateMachineConstruct extends Construct {
     });
 
     //Source https://github.com/shelfio/ghostscript-lambda-layer
-    const ghostscriptLayer = this.getLayerVersion('GhostscriptLayer', 'ghostscript/ghostscript.zip');
-    const imageMagickLayer = this.getLayerVersion('ImageMagickLayer', 'image-magick/layer.zip');
-    const sharpLayer = this.getLayerVersion('SharpLayer', 'sharp/');
-    const pdfkitLayer = this.getLayerVersion('PdfkitLayer', 'pdfkit/');
+    const ghostscriptLayer = this.lambdaHelper.getLayerVersion('GhostscriptLayer', 'ghostscript/ghostscript.zip');
+    const imageMagickLayer = this.lambdaHelper.getLayerVersion('ImageMagickLayer', 'image-magick/layer.zip');
+    const sharpLayer = this.lambdaHelper.getLayerVersion('SharpLayer', 'sharp/');
+    const pdfkitLayer = this.lambdaHelper.getLayerVersion('PdfkitLayer', 'pdfkit/');
 
-    const pdfToImagesFunction = this.getFunction('PdfToImagesFunction', 'pdf-to-Images/',
+    const pdfToImagesFunction = this.getLambdaFunction('PdfToImagesFunction', 'pdf-to-Images/',
       [ghostscriptLayer, imageMagickLayer]);
     this.imageBucket.grantWrite(pdfToImagesFunction);
     this.pdfSourceBucket.grantRead(pdfToImagesFunction);
 
-    const analyzeDocumentImagesFunction = this.getFunction('AnalyzeDocumentImagesFunction', 'analyze-document-images/', []);
+    const analyzeDocumentImagesFunction = this.getLambdaFunction('AnalyzeDocumentImagesFunction', 'analyze-document-images/', []);
     analyzeDocumentImagesFunction.role?.addManagedPolicy({ managedPolicyArn: 'arn:aws:iam::aws:policy/AmazonRekognitionReadOnlyAccess' });
     this.imageBucket.grantReadWrite(analyzeDocumentImagesFunction);
 
-    const correctImageOrientationFunction = this.getFunction('CorrectImageOrientationFunction', 'correct-image-orientation/',
+    const correctImageOrientationFunction = this.getLambdaFunction('CorrectImageOrientationFunction', 'correct-image-orientation/',
       [sharpLayer]);
     this.imageBucket.grantReadWrite(correctImageOrientationFunction);
 
-    const imagesToPdfFunction = this.getFunction('ImagesToPdfFunction', 'images-to-pdf/',
+    const imagesToPdfFunction = this.getLambdaFunction('ImagesToPdfFunction', 'images-to-pdf/',
       [pdfkitLayer]);
     this.imageBucket.grantReadWrite(imagesToPdfFunction);
 
-    const pdfToImagesTask = this.getLambdaInvokeTask('PdfToImagesTask', pdfToImagesFunction);
-    const analyzeDocumentImagesTask = this.getLambdaInvokeTask('AnalyzeDocumentImagesTask', analyzeDocumentImagesFunction);
-    const correctImageOrientationTask = this.getLambdaInvokeTask('CorrectImageOrientationTask', correctImageOrientationFunction);
-    const imagesToPdfTask = this.getLambdaInvokeTask('ImagesToPdfTask', imagesToPdfFunction);
+    const pdfToImagesTask = this.lambdaHelper.getLambdaInvokeTask('PdfToImagesTask', pdfToImagesFunction);
+    const analyzeDocumentImagesTask = this.lambdaHelper.getLambdaInvokeTask('AnalyzeDocumentImagesTask', analyzeDocumentImagesFunction);
+    const correctImageOrientationTask = this.lambdaHelper.getLambdaInvokeTask('CorrectImageOrientationTask', correctImageOrientationFunction);
+    const imagesToPdfTask = this.lambdaHelper.getLambdaInvokeTask('ImagesToPdfTask', imagesToPdfFunction);
 
     const definition = pdfToImagesTask
       .next(analyzeDocumentImagesTask)
@@ -75,36 +75,13 @@ export class CorrectPdfOrientationStateMachineConstruct extends Construct {
     });
   }
 
-  private getLayerVersion(name: string, assetPath: string) {
-    return new lambda.LayerVersion(this, name, {
-      compatibleRuntimes: [
-        lambda.Runtime.NODEJS_14_X,
-      ],
-      code: Code.fromAsset(path.join(__dirname, 'lambda/layer', assetPath)),
-    });
+  private getLambdaFunction(functionName: string, assetPath: string, layers: ILayerVersion[]) {
+    const environment = {
+      ImagesBucket: this.imageBucket.bucketName,
+      PdfSourceBucket: this.pdfSourceBucket.bucketName,
+      PdfDestinationBucket: this.pdfDestinationBucket.bucketName,
+    };
+    return this.lambdaHelper.getLambdaFunction(functionName, assetPath, layers, environment);
   }
 
-  private getFunction(functionName: string, assetPath: string, layers: ILayerVersion[]) {
-    return new lambda.Function(this, functionName, {
-      runtime: Runtime.NODEJS_14_X,
-      memorySize: 1024,
-      timeout: Duration.minutes(15),
-      handler: 'app.lambdaHandler',
-      code: Code.fromAsset(path.join(__dirname, 'lambda', assetPath)),
-      layers: layers,
-      environment: {
-        ImagesBucket: this.imageBucket.bucketName,
-        PdfSourceBucket: this.pdfSourceBucket.bucketName,
-        PdfDestinationBucket: this.pdfDestinationBucket.bucketName,
-      },
-    });
-  }
-
-  private getLambdaInvokeTask(name: string, lambdaFunction: IFunction) {
-    return new tasks.LambdaInvoke(this, name, {
-      lambdaFunction,
-      resultPath: '$.results',
-      outputPath: '$.results.Payload',
-    });
-  }
 }

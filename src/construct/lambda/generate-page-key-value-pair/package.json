@@ -1,0 +1,10 @@
+{
+  "name": "generate-page-key-value-pair",
+  "version": "1.0.0",
+  "description": "json to excel",
+  "main": "app.js",
+  "repository": "https://github.com/wongcyrus/DocumentsSetTextract/tree/master/documents-set-textract",
+  "author": "SAM CLI",
+  "license": "MIT",
+  "dependencies": {}
+}
