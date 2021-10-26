@@ -1,5 +1,5 @@
 {
-  "name": "generate-page-key-value-pair",
+  "name": "save-block-key-value-pair",
   "version": "1.0.0",
   "description": "json to excel",
   "main": "app.js",

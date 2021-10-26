@@ -21,80 +21,17 @@ exports.lambdaHandler = async (event, context) => {
     valueMap,
   } = getKeyValueMap(textractResults);
 
-  await saveKeyValueMap(event.key+"_blockMap",blockMap);
-  await saveKeyValueMap(event.key+"_keyMap",keyMap);
-  await saveKeyValueMap(event.key+"_valueMap",valueMap);
-  // const keyValues = getKeyValueRelationship(keyMap, blockMap, valueMap);
-  // console.log(keyValues);
-  // const keyValuePairJson = key + '_keyValue.json';
-  // await s3.putObject({
-  //   Bucket: process.env['SourceBucket'],
-  //   Key: keyValuePairJson,
-  //   Body: JSON.stringify(keyValues),
-  //   ContentType: 'application/json',
-  // }).promise();
-  // event.keyValuePairJson = keyValuePairJson;
+  const SECONDS_IN_AN_HOUR = 60 * 60;
+  const secondsSinceEpoch = Math.round(Date.now() / 1000);
+  const expirationTime = secondsSinceEpoch + 24 * SECONDS_IN_AN_HOUR;
+
+  await saveKeyValueMap(event.prefix + '_blockMap', blockMap, expirationTime);
+  await saveKeyValueMap(event.prefix + '_keyMap', keyMap, expirationTime);
+  await saveKeyValueMap(event.prefix + '_valueMap', valueMap, expirationTime);
+
   return event;
 };
 
-// const concat = (x, y) =>
-//   x.concat(y);
-//
-// const findValueBlock = (keyBlock, valueMap) => {
-//   let valueBlock = undefined;
-//   if (keyBlock.Relationships) {
-//     valueBlock = keyBlock.Relationships
-//     .filter(relationship => relationship.Type === 'VALUE')
-//     .map(relationship => relationship.Ids)
-//     .reduce(concat, [])
-//     .map(id => valueMap.get(id))
-//     .reduce(concat, []);
-//     return valueBlock[0];
-//   }
-//   return valueBlock;
-// };
-
-// const getText = (result, blockMap) => {
-//   let text = '';
-//   if (result && result.Relationships) {
-//     const blocks = result.Relationships
-//     .filter(r => r['Type'] === 'CHILD')
-//     .map(relationship =>
-//       relationship.Ids.map(id => blockMap.get(id)),
-//     ).reduce(concat, []);
-//     text += blocks.filter(b => b.BlockType === 'WORD')
-//     .reduce((acc, item) => acc + ' ' + item.Text, '');
-//     text += blocks.filter(b => b.BlockType === 'SELECTION_ELEMENT' && b.SelectionStatus === 'SELECTED')
-//     .reduce((acc, item) => acc + 'X ', '');
-//   }
-//   return text.trim();
-// };
-// const getKeyValueRelationship = (keyMap, blockMap, valueMap) => {
-//   return Array.from(keyMap.keys())
-//   .map(blockId => {
-//     return {
-//       blockId: blockId,
-//       keyBlock: keyMap.get(blockId),
-//     };
-//   })
-//   .map(c => {
-//     return {
-//       blockId: c.blockId,
-//       keyBlock: c.keyBlock,
-//       valueBlock: findValueBlock(c.keyBlock, valueMap),
-//     };
-//   })
-//   .map(c => {
-//     return {
-//       key: getText(c.keyBlock, blockMap),
-//       val: getText(c.valueBlock, blockMap),
-//       keyConfidence: c.keyBlock.Confidence,
-//       valueConfidence: c.valueBlock.Confidence,
-//       page: c.keyBlock.Page,
-//     };
-//   })
-//   .filter(c => c.key !== '');
-// };
 
 const getKeyValueMap = textractResults => {
   const blocks = textractResults.Blocks;
@@ -150,23 +87,22 @@ const s3download = async (bucketName, keyName, localDest) => {
   fs.writeFileSync(localDest, data.Body);
 };
 
-const saveKeyValueMap = async (prefix, kvMap) => {
-  await Promise.all(kvMap.map(async (value, key) => {
-    await saveBlockItem(prefix + '###' + key, value);
+const saveKeyValueMap = async (prefix, kvMap, expirationTime) => {
+  await Promise.all(Array.from(kvMap).map(async ([key, value]) => {
+    await saveBlockItem(prefix + '###' + key, value, expirationTime);
   }));
 };
 
-const saveBlockItem = async (id, block) => {
+const saveBlockItem = async (id, block, expirationTime) => {
   const item = block;
-  block['key'] = id;
+  block['Key'] = id;
+  block['ttl'] = expirationTime;
   const params = {
     TableName: process.env['TextractBlockTable'],
     Item: item,
   };
   try {
-    const data = await ddbDocClient.send(new PutCommand(params));
-    console.log('Success - item added or updated', data);
-    return data;
+    return await ddbDocClient.send(new PutCommand(params));
   } catch (err) {
     console.log('Error', err);
   }

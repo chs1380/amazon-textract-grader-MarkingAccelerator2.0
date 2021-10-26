@@ -28,10 +28,11 @@ export class TransformFormResultStateMachineConstruct extends Construct {
 
     this.textractBlockTable = new dynamodb.Table(this, 'TextractBlockTable', {
       partitionKey: {
-        name: 'id',
+        name: 'Key',
         type: dynamodb.AttributeType.STRING,
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: 'ttl',
     });
 
     const generatePageKeyValuePairFunction = this.getLambdaFunction('save-block-key-value-pair',
