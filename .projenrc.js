@@ -1,10 +1,11 @@
 const { AwsCdkTypeScriptApp } = require('projen');
 const project = new AwsCdkTypeScriptApp({
-  cdkVersion: '1.128.0',
+  cdkVersion: '1.129.0',
   defaultReleaseBranch: 'main',
   name: 'amazon-textract-grader',
   cdkDependencies: [
     '@aws-cdk/aws-s3',
+    '@aws-cdk/aws-dynamodb',
     '@aws-cdk/aws-lambda',
     '@aws-cdk/aws-sns',
     '@aws-cdk/aws-sns-subscriptions',

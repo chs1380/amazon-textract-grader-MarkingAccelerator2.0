@@ -6,5 +6,8 @@
   "repository": "https://github.com/wongcyrus/DocumentsSetTextract/tree/master/documents-set-textract",
   "author": "SAM CLI",
   "license": "MIT",
-  "dependencies": {}
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.38.0",
+    "@aws-sdk/lib-dynamodb": "^3.38.0"
+  }
 }
