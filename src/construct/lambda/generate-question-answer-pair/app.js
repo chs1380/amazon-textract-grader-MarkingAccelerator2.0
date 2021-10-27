@@ -87,6 +87,8 @@ const getKeyValueRelationship = async (textractPrefix) => {
     return {
       key: getText(c.keyBlock, blockMap),
       val: getText(c.valueBlock, blockMap),
+      keyGeometry: c.keyBlock.Geometry,
+      valGeometry: c.valueBlock.Geometry,
       keyConfidence: c.keyBlock.Confidence,
       valueConfidence: c.valueBlock.Confidence,
       page: c.keyBlock.Page,
