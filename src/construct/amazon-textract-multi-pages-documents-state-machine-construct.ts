@@ -2,7 +2,7 @@ import { PolicyStatement, Role, ServicePrincipal } from '@aws-cdk/aws-iam';
 import { Bucket } from '@aws-cdk/aws-s3';
 import * as sns from '@aws-cdk/aws-sns';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
-import { Choice, Pass, StateMachine, Wait } from '@aws-cdk/aws-stepfunctions';
+import { Choice, StateMachine, Wait } from '@aws-cdk/aws-stepfunctions';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
 import { WaitTime } from '@aws-cdk/aws-stepfunctions/lib/states/wait';
 import { Construct, Duration } from '@aws-cdk/core';
@@ -69,6 +69,7 @@ export class AmazonTextractMultiPagesDocumentsStateMachineConstruct extends Cons
       action: 'getDocumentAnalysis',
       parameters: {
         JobId: sfn.JsonPath.stringAt('$.textract.JobId'),
+        MaxResults: 1,
       },
       iamResources: ['*'],
       iamAction: 'textract:GetDocumentAnalysis',
@@ -89,12 +90,6 @@ export class AmazonTextractMultiPagesDocumentsStateMachineConstruct extends Cons
         JobId: sfn.JsonPath.stringAt('$.textract.JobId'),
         textractPrefix: sfn.JsonPath.stringAt('States.Format(\'{}/{}\', $.key, $.textract.JobId)'),
       },
-    });
-
-    const handleDataLimitExceeded = new Pass(this, 'DataLimitExceeded').next(jobFinish);
-    getDocumentAnalysis.addCatch(handleDataLimitExceeded, {
-      errors: ['States.DataLimitExceeded'],
-      resultPath: '$.error-info',
     });
 
     const wait = new Wait(this, 'Wait 1 minute', {

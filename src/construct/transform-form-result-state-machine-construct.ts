@@ -28,15 +28,26 @@ export class TransformFormResultStateMachineConstruct extends Construct {
 
     this.textractBlockTable = new dynamodb.Table(this, 'TextractBlockTable', {
       partitionKey: {
-        name: 'Key',
+        name: 'Pk',
         type: dynamodb.AttributeType.STRING,
       },
       sortKey: {
-        name: 'SortKey',
+        name: 'Sk',
         type: dynamodb.AttributeType.STRING,
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       timeToLiveAttribute: 'ttl',
+    });
+    this.textractBlockTable.addGlobalSecondaryIndex({
+      indexName: 'BlockId',
+      partitionKey: {
+        name: 'Id',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'Pk',
+        type: dynamodb.AttributeType.STRING,
+      },
     });
 
     const saveBlockKeyValuePairFunction = this.getLambdaFunction('save-block-key-value-pair',
@@ -64,7 +75,7 @@ export class TransformFormResultStateMachineConstruct extends Construct {
 
     const saveBlockKeyValuePairTask = this.lambdaHelper.getLambdaInvokeTask(saveBlockKeyValuePairFunction);
     const mapPageKey = new sfn.Map(this, 'Parallel Process pages', {
-      maxConcurrency: 100,
+      maxConcurrency: 3,
       itemsPath: sfn.JsonPath.stringAt('$.results.Contents'),
       parameters: {
         prefix: sfn.JsonPath.stringAt('$.textractPrefix'),

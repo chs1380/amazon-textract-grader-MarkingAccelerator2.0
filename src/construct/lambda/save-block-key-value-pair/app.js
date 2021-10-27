@@ -6,7 +6,7 @@ const path = require('path');
 const { ddbDocClient } = require('./ddbDocClient');
 const { PutCommand } = require('@aws-sdk/lib-dynamodb');
 
-exports.lambdaHandler = async (event, context) => {
+exports.lambdaHandler = async(event, context) => {
   const key = event.key;
   const filePath = '/tmp/' + key;
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -15,68 +15,66 @@ exports.lambdaHandler = async (event, context) => {
   const rawData = fs.readFileSync(filePath);
   const textractResults = JSON.parse(rawData);
 
-  const {
-    blockMap,
-    keyMap,
-    valueMap,
-  } = getKeyValueMap(textractResults);
-
   //expire the items after 1 day.
   const SECONDS_IN_AN_HOUR = 60 * 60;
   const secondsSinceEpoch = Math.round(Date.now() / 1000);
   const expirationTime = secondsSinceEpoch + 24 * SECONDS_IN_AN_HOUR;
-
-  await saveKeyValueMap(event.prefix , 'blockMap', blockMap, expirationTime);
-  await saveKeyValueMap(event.prefix , 'keyMap', keyMap, expirationTime);
-  await saveKeyValueMap(event.prefix , 'valueMap', valueMap, expirationTime);
+  await saveKeyValueMap(textractResults, event.prefix, expirationTime);
 
   return event;
 };
 
+const saveBlockItem = async(id, sortKey, block, expirationTime) => {
+  const item = block;
+  block['Pk'] = id;
+  block['Sk'] = sortKey;
+  block['ttl'] = expirationTime;
+  const params = {
+    TableName: process.env['TextractBlockTable'],
+    Item: item
+  };
+  try {
+    return await ddbDocClient.send(new PutCommand(params));
+  }
+  catch (err) {
+    console.error('Error', err);
+    throw err;
+  }
+};
 
-const getKeyValueMap = textractResults => {
+
+const saveKeyValueMap = async(textractResults, prefix, expirationTime) => {
   const blocks = textractResults.Blocks;
-
-  const blockMap = blocks.map(block => {
+  const r = await Promise.all(blocks.map(block => {
     return {
       id: block.Id,
       block,
     };
   })
-  .reduce((map, obj) => {
-    map.set(obj.id, obj.block);
-    return map;
-  }, new Map());
+  .map(async(obj) => {
+    return await saveBlockItem(prefix + '###blockMap', obj.id, obj.block, expirationTime);
+  }));
 
-  const {
-    keyMap,
-    valueMap,
-  } = blocks.map(block => {
+  const l = await Promise.all(blocks.map(block => {
     return {
       id: block.Id,
       block,
     };
   })
   .filter(b => b.block.BlockType === 'KEY_VALUE_SET')
-  .reduce((map, obj) => {
+  .map(async(obj) => {
     if (obj.block['EntityTypes'].includes('KEY')) {
-      map.keyMap.set(obj.id, obj.block);
-    } else {
-      map.valueMap.set(obj.id, obj.block);
+      await saveBlockItem(prefix + '###keyMap', obj.id, obj.block, expirationTime);
     }
-    return map;
-  }, {
-    keyMap: new Map(),
-    valueMap: new Map(),
-  });
-  return {
-    blockMap,
-    keyMap,
-    valueMap,
-  };
+    else {
+      return await saveBlockItem(prefix + '###valueMap', obj.id, obj.block, expirationTime);
+    }
+  }));
+  console.log("blockMap:" + r.length);
+  console.log("keyMap+valueMap:" + l.length);
 };
 
-const s3download = async (bucketName, keyName, localDest) => {
+const s3download = async(bucketName, keyName, localDest) => {
   if (typeof localDest == 'undefined') {
     localDest = keyName;
   }
@@ -86,26 +84,4 @@ const s3download = async (bucketName, keyName, localDest) => {
   };
   const data = await s3.getObject(params).promise();
   fs.writeFileSync(localDest, data.Body);
-};
-
-const saveKeyValueMap = async (prefix, mapName, kvMap, expirationTime) => {
-  await Promise.all(Array.from(kvMap).map(async ([key, value]) => {
-    await saveBlockItem(prefix + '###' + mapName, key, value, expirationTime);
-  }));
-};
-
-const saveBlockItem = async (id, sortKey, block, expirationTime) => {
-  const item = block;
-  block['Key'] = id;
-  block['SortKey'] = sortKey;
-  block['ttl'] = expirationTime;
-  const params = {
-    TableName: process.env['TextractBlockTable'],
-    Item: item,
-  };
-  try {
-    return await ddbDocClient.send(new PutCommand(params));
-  } catch (err) {
-    console.log('Error', err);
-  }
 };
