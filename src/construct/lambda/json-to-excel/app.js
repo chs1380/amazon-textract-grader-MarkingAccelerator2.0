@@ -36,6 +36,7 @@ exports.lambdaHandler = async (event, context) => {
   const {
     documentConfidencePairs,
     documentValuePairs,
+    documentAnswerGeometryPairs
   } = popularDocumentSheet(
     documentValueWorkSheet,
     documentConfidenceWorkSheet,
@@ -47,6 +48,7 @@ exports.lambdaHandler = async (event, context) => {
   const excelKey = event.key.replace('.pdf', '.xlsx');
   const documentConfidencePairsKey = event.key.replace('.pdf', '_DocumentConfidencePairs.json');
   const documentValuePairsKey = event.key.replace('.pdf', '_DocumentValuePairs.json');
+  const documentAnswerGeometryPairsKey = event.key.replace('.pdf', '_DocumentAnswerGeometryPairsKey.json');
   const excelFilePath = '/tmp/' + excelKey;
 
   await writeExcel(wb, excelFilePath);
@@ -63,6 +65,7 @@ exports.lambdaHandler = async (event, context) => {
 
   await saveMapToS3(documentConfidencePairsKey, documentConfidencePairs);
   await saveMapToS3(documentValuePairsKey, documentValuePairs);
+  await saveMapToS3(documentAnswerGeometryPairsKey, documentAnswerGeometryPairs);
 
   delete event.results;
   event.documentConfidencePairsKey = documentConfidencePairsKey;
@@ -95,25 +98,32 @@ const convertMapToJsonObject = (pairsMap) => {
 const getDocumentPairs = (keyValuePairJson, pages) => {
   let individualKeyValue = new Map();
   let individualConfidenceValue = new Map();
+  let individualAnswerGeometryValue = new Map();
   let documentValuePairs = [];
   let documentConfidencePairs = [];
+  let documentAnswerGeometryPairs = [];
   for (let y = 0; y < pages.length; y++) {
     let kvs = keyValuePairJson.filter((c) => c.page === pages[y]);
     if (kvs.map((c) => c.key).some((key) => individualKeyValue.has(key))) {
       documentValuePairs.push(individualKeyValue);
       documentConfidencePairs.push(individualConfidenceValue);
+      documentAnswerGeometryPairs.push(individualAnswerGeometryValue);
       individualKeyValue = new Map();
       individualConfidenceValue = new Map();
+      individualAnswerGeometryValue = new Map();
     }
     kvs.map((c) => individualKeyValue.set(c.key, c.val));
     kvs.map((c) => individualConfidenceValue.set(c.key, c.valueConfidence));
+    kvs.map((c) => individualAnswerGeometryValue.set(c.key, c.valGeometry));
   }
   documentValuePairs.push(individualKeyValue);
   documentConfidencePairs.push(individualConfidenceValue);
+  documentAnswerGeometryPairs.push(individualAnswerGeometryValue);
 
   return {
     documentValuePairs,
     documentConfidencePairs,
+    documentAnswerGeometryPairs
   };
 };
 
@@ -154,6 +164,7 @@ const popularDocumentSheet = (
   let {
     documentValuePairs,
     documentConfidencePairs,
+    documentAnswerGeometryPairs
   } = getDocumentPairs(
     keyValuePairJson,
     pages,
@@ -176,6 +187,7 @@ const popularDocumentSheet = (
   return {
     documentValuePairs,
     documentConfidencePairs,
+    documentAnswerGeometryPairs
   };
 };
 
