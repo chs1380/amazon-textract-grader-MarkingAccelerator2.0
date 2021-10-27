@@ -25,9 +25,6 @@ exports.lambdaHandler = async (event, context) => {
   const pages = Array.from(new Set(keyValuePairJson.map((c) => c.page))).sort(
     (a, b) => a - b,
   );
-  // console.log(keys);
-  // console.log(pages);
-  // console.log(keyValuePairJson);
 
   popularPageSheet(
     pageValueWorkSheet,
@@ -60,27 +57,39 @@ exports.lambdaHandler = async (event, context) => {
     Bucket: process.env['DestinationBucket'],
     Key: excelKey,
     Body: data,
-    ContentType:
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ContentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   }).promise();
-  await s3.putObject({
-    Bucket: process.env['DestinationBucket'],
-    Key: documentValuePairsKey,
-    Body: JSON.stringify(documentValuePairs),
-    ContentType: 'application/json',
-  }).promise();
-  await s3.putObject({
-    Bucket: process.env['DestinationBucket'],
-    Key: documentConfidencePairsKey,
-    Body: JSON.stringify(documentConfidencePairs),
-    ContentType: 'application/json',
-  }).promise();
+
+
+  await saveMapToS3(documentConfidencePairsKey, documentConfidencePairs);
+  await saveMapToS3(documentValuePairsKey, documentValuePairs);
 
   delete event.results;
   event.documentConfidencePairsKey = documentConfidencePairsKey;
   event.documentValuePairsKey = documentValuePairsKey;
   event.excelKey = excelKey;
   return event;
+};
+
+const saveMapToS3 = async (key, pairsMap) => {
+  await s3.putObject({
+    Bucket: process.env['DestinationBucket'],
+    Key: key,
+    Body: JSON.stringify(convertMapToJsonObject(pairsMap)),
+    ContentType: 'application/json',
+  }).promise();
+};
+
+const convertMapToJsonObject = (pairsMap) => {
+  let jsonObject = {};
+  pairsMap.forEach((value, key) => {
+    let jsonInnerObject = {};
+    value.forEach((value, key) => {
+      jsonInnerObject[key] = value;
+    });
+    jsonObject[key] = jsonInnerObject;
+  });
+  return jsonObject;
 };
 
 const getDocumentPairs = (keyValuePairJson, pages) => {
@@ -101,6 +110,7 @@ const getDocumentPairs = (keyValuePairJson, pages) => {
   }
   documentValuePairs.push(individualKeyValue);
   documentConfidencePairs.push(individualConfidenceValue);
+
   return {
     documentValuePairs,
     documentConfidencePairs,
