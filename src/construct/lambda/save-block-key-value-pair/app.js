@@ -21,13 +21,14 @@ exports.lambdaHandler = async (event, context) => {
     valueMap,
   } = getKeyValueMap(textractResults);
 
+  //expire the items after 1 day.
   const SECONDS_IN_AN_HOUR = 60 * 60;
   const secondsSinceEpoch = Math.round(Date.now() / 1000);
   const expirationTime = secondsSinceEpoch + 24 * SECONDS_IN_AN_HOUR;
 
-  await saveKeyValueMap(event.prefix + '_blockMap', blockMap, expirationTime);
-  await saveKeyValueMap(event.prefix + '_keyMap', keyMap, expirationTime);
-  await saveKeyValueMap(event.prefix + '_valueMap', valueMap, expirationTime);
+  await saveKeyValueMap(event.prefix , 'blockMap', blockMap, expirationTime);
+  await saveKeyValueMap(event.prefix , 'keyMap', keyMap, expirationTime);
+  await saveKeyValueMap(event.prefix , 'valueMap', valueMap, expirationTime);
 
   return event;
 };
@@ -87,15 +88,16 @@ const s3download = async (bucketName, keyName, localDest) => {
   fs.writeFileSync(localDest, data.Body);
 };
 
-const saveKeyValueMap = async (prefix, kvMap, expirationTime) => {
+const saveKeyValueMap = async (prefix, mapName, kvMap, expirationTime) => {
   await Promise.all(Array.from(kvMap).map(async ([key, value]) => {
-    await saveBlockItem(prefix + '###' + key, value, expirationTime);
+    await saveBlockItem(prefix + '###' + mapName, key, value, expirationTime);
   }));
 };
 
-const saveBlockItem = async (id, block, expirationTime) => {
+const saveBlockItem = async (id, sortKey, block, expirationTime) => {
   const item = block;
   block['Key'] = id;
+  block['SortKey'] = sortKey;
   block['ttl'] = expirationTime;
   const params = {
     TableName: process.env['TextractBlockTable'],

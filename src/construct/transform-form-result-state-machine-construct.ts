@@ -31,14 +31,18 @@ export class TransformFormResultStateMachineConstruct extends Construct {
         name: 'Key',
         type: dynamodb.AttributeType.STRING,
       },
+      sortKey: {
+        name: 'SortKey',
+        type: dynamodb.AttributeType.STRING,
+      },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       timeToLiveAttribute: 'ttl',
     });
 
-    const generatePageKeyValuePairFunction = this.getLambdaFunction('save-block-key-value-pair',
+    const saveBlockKeyValuePairFunction = this.getLambdaFunction('save-block-key-value-pair',
       []);
-    this.sourceBucket.grantReadWrite(generatePageKeyValuePairFunction);
-    this.textractBlockTable.grantReadWriteData(generatePageKeyValuePairFunction);
+    this.sourceBucket.grantReadWrite(saveBlockKeyValuePairFunction);
+    this.textractBlockTable.grantReadWriteData(saveBlockKeyValuePairFunction);
 
     const getTextractResultList = new tasks.CallAwsService(this, 'GetTextractResultList', {
       service: 's3',
@@ -58,19 +62,25 @@ export class TransformFormResultStateMachineConstruct extends Construct {
       resultPath: '$.results',
     });
 
-
-    const generatePageKeyValuePairTask = this.lambdaHelper.getLambdaInvokeTask(generatePageKeyValuePairFunction);
+    const saveBlockKeyValuePairTask = this.lambdaHelper.getLambdaInvokeTask(saveBlockKeyValuePairFunction);
     const mapPageKey = new sfn.Map(this, 'Parallel Process pages', {
-      maxConcurrency: 1,
+      maxConcurrency: 100,
       itemsPath: sfn.JsonPath.stringAt('$.results.Contents'),
       parameters: {
         prefix: sfn.JsonPath.stringAt('$.textractPrefix'),
         key: sfn.JsonPath.stringAt('$$.Map.Item.Value.Key'),
       },
+      resultPath: sfn.JsonPath.DISCARD, //Discard the Result and Keep the Original Input.
     });
-    mapPageKey.iterator(generatePageKeyValuePairTask);
+    mapPageKey.iterator(saveBlockKeyValuePairTask);
 
-    const definition = getTextractResultList.next(mapPageKey);
+    const generateQuestionAnswerFunction = this.getLambdaFunction('generate-question-answer-pair',
+      []);
+    this.destinationBucket.grantWrite(generateQuestionAnswerFunction);
+    this.textractBlockTable.grantFullAccess(generateQuestionAnswerFunction);
+    const generateQuestionAnswerTask = this.lambdaHelper.getLambdaInvokeTask(generateQuestionAnswerFunction);
+
+    const definition = getTextractResultList.next(mapPageKey).next(generateQuestionAnswerTask);
 
     this.stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definition,
