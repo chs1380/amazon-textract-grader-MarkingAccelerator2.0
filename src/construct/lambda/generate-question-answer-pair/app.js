@@ -16,7 +16,7 @@ exports.lambdaHandler = async (event, context) => {
 
   const keyValues = await getKeyValueRelationship(textractPrefix);
   console.log(keyValues);
-  const keyValuePairJson = key.replace('.json', '_keyValue.json');
+  const keyValuePairJson = key.replace('.pdf', '_keyValue.json');
   await s3.putObject({
     Bucket: process.env['DestinationBucket'],
     Key: keyValuePairJson,
@@ -28,8 +28,7 @@ exports.lambdaHandler = async (event, context) => {
   return event;
 };
 
-const concat = (x, y) =>
-  x.concat(y);
+const concat = (x, y) => x.concat(y);
 
 const findValueBlock = (keyBlock, valueMap) => {
   if (keyBlock.Relationships) {

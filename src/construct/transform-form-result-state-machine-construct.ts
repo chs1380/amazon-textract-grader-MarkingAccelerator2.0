@@ -53,7 +53,7 @@ export class TransformFormResultStateMachineConstruct extends Construct {
     const saveBlockKeyValuePairFunction = this.getLambdaFunction('save-block-key-value-pair',
       []);
     this.sourceBucket.grantReadWrite(saveBlockKeyValuePairFunction);
-    this.textractBlockTable.grantReadWriteData(saveBlockKeyValuePairFunction);
+    this.textractBlockTable.grantWriteData(saveBlockKeyValuePairFunction);
 
     const getTextractResultList = new tasks.CallAwsService(this, 'GetTextractResultList', {
       service: 's3',
@@ -88,10 +88,15 @@ export class TransformFormResultStateMachineConstruct extends Construct {
     const generateQuestionAnswerFunction = this.getLambdaFunction('generate-question-answer-pair',
       []);
     this.destinationBucket.grantWrite(generateQuestionAnswerFunction);
-    this.textractBlockTable.grantFullAccess(generateQuestionAnswerFunction);
+    this.textractBlockTable.grantReadData(generateQuestionAnswerFunction);
     const generateQuestionAnswerTask = this.lambdaHelper.getLambdaInvokeTask(generateQuestionAnswerFunction);
 
-    const definition = getTextractResultList.next(mapPageKey).next(generateQuestionAnswerTask);
+    const jsonToExcelFunction = this.getLambdaFunction('json-to-excel',
+      []);
+    this.destinationBucket.grantReadWrite(jsonToExcelFunction);
+    const jsonToExcelTask = this.lambdaHelper.getLambdaInvokeTask(jsonToExcelFunction);
+
+    const definition = getTextractResultList.next(mapPageKey).next(generateQuestionAnswerTask).next(jsonToExcelTask);
 
     this.stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definition,

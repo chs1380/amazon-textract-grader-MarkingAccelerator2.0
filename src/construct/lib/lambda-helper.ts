@@ -26,7 +26,7 @@ export class LambdaHelper {
   public getLambdaFunction(assetPath: string, layers: ILayerVersion[], environment: {
     [key: string]: string;
   }) {
-    const functionName = assetPath.split('-').map(c => c.charAt(0).toUpperCase() + c.substring(1).toLowerCase() + 'Function').join('');
+    const functionName = assetPath.split('-').map(c => c.charAt(0).toUpperCase() + c.substring(1).toLowerCase()).join('') + 'Function';
     return new lambda.Function(this._scope, functionName, {
       runtime: Runtime.NODEJS_14_X,
       memorySize: 1024,
