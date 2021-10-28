@@ -55,7 +55,8 @@ export class CorrectPdfOrientationStateMachineConstruct extends Construct {
 
     const imagesToPdfFunction = this.getLambdaFunction('images-to-pdf',
       [pdfkitLayer]);
-    this.imageBucket.grantReadWrite(imagesToPdfFunction);
+    this.imageBucket.grantRead(imagesToPdfFunction);
+    this.pdfDestinationBucket.grantWrite(imagesToPdfFunction);
 
     const pdfToImagesTask = this.lambdaHelper.getLambdaInvokeTask(pdfToImagesFunction);
     const analyzeDocumentImagesTask = this.lambdaHelper.getLambdaInvokeTask( analyzeDocumentImagesFunction);

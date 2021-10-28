@@ -6,7 +6,7 @@ const readFile = promisify(fs.readFile);
 const xl = require('excel4node');
 const path = require('path');
 
-exports.lambdaHandler = async (event, context) => {
+exports.lambdaHandler = async (event) => {
   const key = event.keyValuePairJson;
   const filePath = '/tmp/' + key;
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -84,15 +84,15 @@ const saveMapToS3 = async (key, pairsMap) => {
 };
 
 const convertMapToJsonObject = (pairsMap) => {
-  let jsonObject = {};
-  pairsMap.forEach((value, key) => {
+  let jsonObjectList = [];
+  pairsMap.forEach((value) => {
     let jsonInnerObject = {};
     value.forEach((value, key) => {
       jsonInnerObject[key] = value;
     });
-    jsonObject[key] = jsonInnerObject;
+    jsonObjectList.push(jsonInnerObject);
   });
-  return jsonObject;
+  return jsonObjectList;
 };
 
 const getDocumentPairs = (keyValuePairJson, pages) => {
@@ -104,6 +104,7 @@ const getDocumentPairs = (keyValuePairJson, pages) => {
   let documentAnswerGeometryPairs = [];
   for (let y = 0; y < pages.length; y++) {
     let kvs = keyValuePairJson.filter((c) => c.page === pages[y]);
+    //Assume document page ordering is correct, then found any repeated key, then consider it is a new document.
     if (kvs.map((c) => c.key).some((key) => individualKeyValue.has(key))) {
       documentValuePairs.push(individualKeyValue);
       documentConfidencePairs.push(individualConfidenceValue);

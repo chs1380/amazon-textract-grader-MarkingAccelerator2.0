@@ -15,7 +15,9 @@ export class LambdaHelper {
   public getLayerVersion(assetPath: string) {
     let name = assetPath.split('/')[0];
     name = name.charAt(0).toUpperCase() + name.substring(1).toLowerCase() + 'Layer';
+    const namePrefix = this._scope.node.tryGetContext('namePrefix');
     return new lambda.LayerVersion(this._scope, name, {
+      layerVersionName: namePrefix + name,
       compatibleRuntimes: [
         lambda.Runtime.NODEJS_14_X,
       ],
@@ -27,7 +29,9 @@ export class LambdaHelper {
     [key: string]: string;
   }) {
     const functionName = assetPath.split('-').map(c => c.charAt(0).toUpperCase() + c.substring(1).toLowerCase()).join('') + 'Function';
+    const namePrefix = this._scope.node.tryGetContext('namePrefix');
     return new lambda.Function(this._scope, functionName, {
+      functionName: namePrefix + functionName,
       runtime: Runtime.NODEJS_14_X,
       memorySize: 1024,
       timeout: Duration.minutes(15),

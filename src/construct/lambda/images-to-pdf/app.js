@@ -1,13 +1,15 @@
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 const fs = require('fs');
+const fsExtra = require('fs-extra');
 const { promisify } = require('util');
 const PDFDocument = require('/opt/node_modules/pdfkit');
 const readFile = promisify(fs.readFile);
 const path = require('path');
 
-exports.lambdaHandler = async (event, context) => {
+exports.lambdaHandler = async (event) => {
   console.log(JSON.stringify(event));
+  fsExtra.emptyDirSync('/tmp/');
   const pdf = '/tmp/' + event.srcKey;
   rmDir(path.dirname(pdf));
   fs.mkdirSync(path.dirname(pdf), { recursive: true });
@@ -27,19 +29,19 @@ exports.lambdaHandler = async (event, context) => {
   console.log('File Size in Bytes:- ' + stats.size);
   const data = await readFile(pdf);
   await s3
-    .putObject({
-      Bucket: process.env['PdfDestinationBucket'],
-      Key: event.srcKey,
-      Body: data,
-      ContentType: 'application/pdf',
-    })
-    .promise();
+  .putObject({
+    Bucket: process.env['PdfDestinationBucket'],
+    Key: event.srcKey,
+    Body: data,
+    ContentType: 'application/pdf',
+  })
+  .promise();
 
   return event;
 };
 
 const combineImagesToPdf = (images, pdf) => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const doc = new PDFDocument();
     const pdfStream = fs.createWriteStream(pdf);
     doc.pipe(pdfStream);
@@ -103,5 +105,5 @@ const rmDir = (dirPath) => {
       }
     }
   }
-  if (dirPath !== "/tmp") fs.rmdirSync(dirPath);
+  if (dirPath !== '/tmp') fs.rmdirSync(dirPath);
 };

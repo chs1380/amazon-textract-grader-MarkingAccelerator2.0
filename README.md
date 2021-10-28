@@ -16,3 +16,9 @@ projen watch
 projen deploy
 ###Deployment hotswap
 projen deploy-hotswap
+
+Input format for CorrectPdfOrientationStateMachine and AssignmentsTextractStateMachine
+
+<code>{
+"key": "cywong@vtc.vtc.edu.hk/IT41213Testscript.pdf"
+}</code>

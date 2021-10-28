@@ -1,8 +1,6 @@
 import { Bucket } from '@aws-cdk/aws-s3';
 import { App, CfnOutput, Construct, RemovalPolicy, Stack, StackProps } from '@aws-cdk/core';
-import { AmazonTextractMultiPagesDocumentsStateMachineConstruct } from './construct/amazon-textract-multi-pages-documents-state-machine-construct';
-import { CorrectPdfOrientationStateMachineConstruct } from './construct/correct-pdf-orientation-state-machine-construct';
-import { TransformFormResultStateMachineConstruct } from './construct/transform-form-result-state-machine-construct';
+import { AssignmentsTextractStateMachineConstruct } from './construct/assignments-textract-state-machine';
 
 export class AmazonTextractGraderStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps = {}) {
@@ -16,18 +14,10 @@ export class AmazonTextractGraderStack extends Stack {
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY,
     });
-    new CorrectPdfOrientationStateMachineConstruct(this, 'CorrectPdfOrientationStateMachineConstruct', {
+
+    new AssignmentsTextractStateMachineConstruct(this, 'AssignmentsTextractStateMachineConstruct', {
       pdfSourceBucket,
       pdfDestinationBucket,
-    });
-    new AmazonTextractMultiPagesDocumentsStateMachineConstruct(this, 'AmazonTextractMultiPagesDocumentsStateMachineConstruct', {
-      pdfSourceBucket,
-      destinationBucket: pdfDestinationBucket,
-    });
-
-    new TransformFormResultStateMachineConstruct(this, 'TransformFormResultStateMachineConstruct', {
-      sourceBucket: pdfDestinationBucket,
-      destinationBucket: pdfDestinationBucket,
     });
 
     new CfnOutput(this, 'PdfSourceBucketOutput', {

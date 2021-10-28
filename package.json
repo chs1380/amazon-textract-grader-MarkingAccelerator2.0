@@ -1,5 +1,9 @@
 {
   "name": "amazon-textract-grader",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wongcyrus/amazon-textract-grader"
+  },
   "scripts": {
     "clobber": "npx projen clobber",
     "compile": "npx projen compile",
@@ -17,6 +21,11 @@
     "upgrade": "npx projen upgrade",
     "upgrade-projen": "npx projen upgrade-projen",
     "projen": "npx projen"
+  },
+  "author": {
+    "name": "Cyrus Wong",
+    "email": "cywong@vtc.edu.hk",
+    "organization": false
   },
   "devDependencies": {
     "@types/jest": "^27.0.2",
@@ -50,6 +59,11 @@
     "@aws-cdk/core": "^1.129.0"
   },
   "bundledDependencies": [],
+  "keywords": [
+    "cdk",
+    "stepfunction",
+    "textract"
+  ],
   "license": "Apache-2.0",
   "version": "0.0.0",
   "jest": {
