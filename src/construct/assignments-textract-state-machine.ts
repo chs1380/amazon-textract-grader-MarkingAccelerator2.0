@@ -67,7 +67,12 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       },
     });
 
-    const parallel = new sfn.Parallel(this, 'ProcessParallel');
+    const parallel = new sfn.Parallel(this, 'ProcessParallel', {
+      resultSelector: {
+        'scripts.$': '$.[0].Output',
+        'standardAnswer.$': '$.[1].Output',
+      },
+    });
     parallel.branch(scriptsPass
       .next(correctPdfOrientationStateMachineExecution)
       .next(scriptsAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution)
