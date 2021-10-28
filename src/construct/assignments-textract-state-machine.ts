@@ -42,28 +42,54 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       outputPath: '$.results',
     });
 
-    const amazonTextractMultiPagesDocumentsStateMachineExecution = new tasks.StepFunctionsStartExecution(this, 'AmazonTextractMultiPagesDocumentsStateMachineExecution', {
-      stateMachine: amazonTextractMultiPagesDocumentsStateMachineConstruct.stateMachine,
-      integrationPattern: IntegrationPattern.RUN_JOB,
-      input: TaskInput.fromJsonPathAt('$.Input'),
-      resultPath: '$.results',
-      outputPath: '$.results',
+    const standardAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution = this.getStateMachineExecution(
+      'StandardAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution', amazonTextractMultiPagesDocumentsStateMachineConstruct.stateMachine);
+
+    const scriptsAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution = this.getStateMachineExecution(
+      'ScriptsAmazonTextractMultiPagesDocumentsStateMachineExecution', amazonTextractMultiPagesDocumentsStateMachineConstruct.stateMachine);
+
+    const standardAnswerTransformFormResultStateMachineExecution = this.getStateMachineExecution(
+      'StandardAnswerTransformFormResultStateMachineExecution', transformFormResultStateMachineConstruct.stateMachine, '$.Output');
+
+    const scriptsAnswerTransformFormResultStateMachineExecution = this.getStateMachineExecution(
+      'ScriptsAnswerTransformFormResultStateMachineExecution', transformFormResultStateMachineConstruct.stateMachine, '$.Output');
+
+    const start = new sfn.Pass(this, 'StartPass');
+    const standardAnswerPass = new sfn.Pass(this, 'StandardAnswerPass', {
+      parameters: {
+        key: sfn.JsonPath.stringAt('$.standardAnswerKey'),
+      },
+      resultPath: '$.Input',
     });
-    const transformFormResultStateMachineExecution = new tasks.StepFunctionsStartExecution(this, 'TransformFormResultStateMachineExecution', {
-      stateMachine: transformFormResultStateMachineConstruct.stateMachine,
-      integrationPattern: IntegrationPattern.RUN_JOB,
-      input: TaskInput.fromJsonPathAt('$.Output'),
-      resultPath: '$.results',
-      outputPath: '$.results.Output',
+    const scriptsPass = new sfn.Pass(this, 'ScriptsPass', {
+      parameters: {
+        key: sfn.JsonPath.stringAt('$.scriptsKey'),
+      },
     });
 
-    const definition = correctPdfOrientationStateMachineExecution
-      .next(amazonTextractMultiPagesDocumentsStateMachineExecution)
-      .next(transformFormResultStateMachineExecution);
+    const parallel = new sfn.Parallel(this, 'ProcessParallel');
+    parallel.branch(scriptsPass
+      .next(correctPdfOrientationStateMachineExecution)
+      .next(scriptsAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution)
+      .next(scriptsAnswerTransformFormResultStateMachineExecution));
+    parallel.branch(standardAnswerPass
+      .next(standardAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution)
+      .next(standardAnswerTransformFormResultStateMachineExecution));
+    const definition = start.next(parallel);
 
     this.stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definition,
       timeout: Duration.minutes(180),
+    });
+  }
+
+  private getStateMachineExecution(sid: string, stateMachine: StateMachine, inputPath: string = '$.Input') {
+    return new tasks.StepFunctionsStartExecution(this, sid, {
+      stateMachine: stateMachine,
+      integrationPattern: IntegrationPattern.RUN_JOB,
+      input: TaskInput.fromJsonPathAt(inputPath),
+      resultPath: '$.results',
+      outputPath: '$.results',
     });
   }
 }
