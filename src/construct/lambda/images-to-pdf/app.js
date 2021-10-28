@@ -10,7 +10,7 @@ const path = require('path');
 exports.lambdaHandler = async (event) => {
   console.log(JSON.stringify(event));
   fsExtra.emptyDirSync('/tmp/');
-  const pdf = '/tmp/' + event.srcKey;
+  const pdf = '/tmp/' + event.key;
   rmDir(path.dirname(pdf));
   fs.mkdirSync(path.dirname(pdf), { recursive: true });
   const images = [...Array(event.numberOfImages).keys()].map((x, y) => {
@@ -31,7 +31,7 @@ exports.lambdaHandler = async (event) => {
   await s3
   .putObject({
     Bucket: process.env['PdfDestinationBucket'],
-    Key: event.srcKey,
+    Key: event.key,
     Body: data,
     ContentType: 'application/pdf',
   })

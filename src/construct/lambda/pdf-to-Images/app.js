@@ -41,13 +41,9 @@ exports.lambdaHandler = async (event) => {
   console.log(s3Results);
   const images = results.map((c) => c.path.replace('/tmp/', ''));
 
-  return {
-    srcBucket,
-    srcKey,
-    imagePrefix:
-      srcKey.replace('.pdf', '') + '/' + images[0].replace('1.png', ''),
-    numberOfImages: images.length,
-  };
+  event.imagePrefix = srcKey.replace('.pdf', '') + '/' + images[0].replace('1.png', '');
+  event.numberOfImages = images.length;
+  return event;
 };
 
 const s3download = async (bucketName, keyName, localDest) => {

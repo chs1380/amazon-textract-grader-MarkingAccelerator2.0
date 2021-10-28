@@ -35,29 +35,28 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       destinationBucket: pdfDestinationBucket,
     });
 
-    const correctPdfOrientationStateMachineExecution = new tasks.StepFunctionsStartExecution(this, 'CorrectPdfOrientationStateMachineExecution', {
-      stateMachine: correctPdfOrientationStateMachineConstruct.stateMachine,
-      integrationPattern: IntegrationPattern.RUN_JOB,
-      resultPath: '$.results',
-      outputPath: '$.results',
-    });
+    const scriptsCorrectPdfOrientationStateMachineExecution = this.getStateMachineExecution(
+      'ScriptsCorrectPdfOrientationStateMachineExecution', correctPdfOrientationStateMachineConstruct.stateMachine);
+    const answerCorrectPdfOrientationStateMachineExecution = this.getStateMachineExecution(
+      'AnswerCorrectPdfOrientationStateMachineExecution', correctPdfOrientationStateMachineConstruct.stateMachine);
 
-    const standardAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution = this.getStateMachineExecution(
-      'StandardAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution', amazonTextractMultiPagesDocumentsStateMachineConstruct.stateMachine);
+    const answerAmazonTextractMultiPagesDocumentsStateMachineExecution = this.getStateMachineExecution(
+      'AnswerAmazonTextractMultiPagesDocumentsStateMachineExecution', amazonTextractMultiPagesDocumentsStateMachineConstruct.stateMachine);
 
-    const scriptsAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution = this.getStateMachineExecution(
+    const scriptsAmazonTextractMultiPagesDocumentsStateMachineExecution = this.getStateMachineExecution(
       'ScriptsAmazonTextractMultiPagesDocumentsStateMachineExecution', amazonTextractMultiPagesDocumentsStateMachineConstruct.stateMachine);
 
-    const standardAnswerTransformFormResultStateMachineExecution = this.getStateMachineExecution(
-      'StandardAnswerTransformFormResultStateMachineExecution', transformFormResultStateMachineConstruct.stateMachine, '$.Output');
+    const answerTransformFormResultStateMachineExecution = this.getStateMachineExecution(
+      'AnswerTransformFormResultStateMachineExecution', transformFormResultStateMachineConstruct.stateMachine, '$.Output');
 
-    const scriptsAnswerTransformFormResultStateMachineExecution = this.getStateMachineExecution(
-      'ScriptsAnswerTransformFormResultStateMachineExecution', transformFormResultStateMachineConstruct.stateMachine, '$.Output');
+    const scriptsTransformFormResultStateMachineExecution = this.getStateMachineExecution(
+      'ScriptsTransformFormResultStateMachineExecution', transformFormResultStateMachineConstruct.stateMachine, '$.Output');
 
     const start = new sfn.Pass(this, 'StartPass');
     const standardAnswerPass = new sfn.Pass(this, 'StandardAnswerPass', {
       parameters: {
         key: sfn.JsonPath.stringAt('$.standardAnswerKey'),
+        skipRotation: true, //Dummy value.
       },
       resultPath: '$.Input',
     });
@@ -65,6 +64,7 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       parameters: {
         key: sfn.JsonPath.stringAt('$.scriptsKey'),
       },
+      resultPath: '$.Input',
     });
 
     const parallel = new sfn.Parallel(this, 'ProcessParallel', {
@@ -74,12 +74,13 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       },
     });
     parallel.branch(scriptsPass
-      .next(correctPdfOrientationStateMachineExecution)
-      .next(scriptsAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution)
-      .next(scriptsAnswerTransformFormResultStateMachineExecution));
+      .next(scriptsCorrectPdfOrientationStateMachineExecution)
+      .next(scriptsAmazonTextractMultiPagesDocumentsStateMachineExecution)
+      .next(scriptsTransformFormResultStateMachineExecution));
     parallel.branch(standardAnswerPass
-      .next(standardAnswerAmazonTextractMultiPagesDocumentsStateMachineExecution)
-      .next(standardAnswerTransformFormResultStateMachineExecution));
+      .next(answerCorrectPdfOrientationStateMachineExecution)
+      .next(answerAmazonTextractMultiPagesDocumentsStateMachineExecution)
+      .next(answerTransformFormResultStateMachineExecution));
     const definition = start.next(parallel);
 
     this.stateMachine = new sfn.StateMachine(this, 'StateMachine', {
