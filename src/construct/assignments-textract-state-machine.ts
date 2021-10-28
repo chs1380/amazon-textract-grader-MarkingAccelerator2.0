@@ -1,6 +1,6 @@
 import { Bucket } from '@aws-cdk/aws-s3';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
-import { IntegrationPattern, StateMachine } from '@aws-cdk/aws-stepfunctions';
+import { IntegrationPattern, StateMachine, TaskInput } from '@aws-cdk/aws-stepfunctions';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
 import { Construct, Duration } from '@aws-cdk/core';
 import { AmazonTextractMultiPagesDocumentsStateMachineConstruct } from './amazon-textract-multi-pages-documents-state-machine-construct';
@@ -20,13 +20,13 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
     super(scope, id);
 
     const pdfSourceBucket = props.pdfSourceBucket;
-    const pdfDestinationBucket = props.pdfSourceBucket;
+    const pdfDestinationBucket = props.pdfDestinationBucket;
     const correctPdfOrientationStateMachineConstruct = new CorrectPdfOrientationStateMachineConstruct(this, 'CorrectPdfOrientationStateMachineConstruct', {
       pdfSourceBucket,
       pdfDestinationBucket,
     });
     const amazonTextractMultiPagesDocumentsStateMachineConstruct = new AmazonTextractMultiPagesDocumentsStateMachineConstruct(this, 'AmazonTextractMultiPagesDocumentsStateMachineConstruct', {
-      pdfSourceBucket,
+      pdfSourceBucket: pdfDestinationBucket,
       destinationBucket: pdfDestinationBucket,
     });
 
@@ -45,16 +45,16 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
     const amazonTextractMultiPagesDocumentsStateMachineExecution = new tasks.StepFunctionsStartExecution(this, 'AmazonTextractMultiPagesDocumentsStateMachineExecution', {
       stateMachine: amazonTextractMultiPagesDocumentsStateMachineConstruct.stateMachine,
       integrationPattern: IntegrationPattern.RUN_JOB,
-      inputPath: '$.results',
+      input: TaskInput.fromJsonPathAt('$.Input'),
       resultPath: '$.results',
       outputPath: '$.results',
     });
     const transformFormResultStateMachineExecution = new tasks.StepFunctionsStartExecution(this, 'TransformFormResultStateMachineExecution', {
       stateMachine: transformFormResultStateMachineConstruct.stateMachine,
       integrationPattern: IntegrationPattern.RUN_JOB,
-      inputPath: '$.results',
+      input: TaskInput.fromJsonPathAt('$.Output'),
       resultPath: '$.results',
-      outputPath: '$.results',
+      outputPath: '$.results.Output',
     });
 
     const definition = correctPdfOrientationStateMachineExecution
