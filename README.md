@@ -2,14 +2,20 @@
 This project uses AWS AI services to speed up grading task.
 
 # AWS Cloud9 Setup Environment
+```
 git clone https://github.com/wongcyrus/amazon-textract-grader
-cd amazon-textract-grader/
-npm i nvm
-nvm install
-nvm alias default 14
-npm install -g yarn
-npm install -g --force npx
-alias pj='npx projen'
+cd amazon-textract-grader/  
+npm i nvm  
+nvm install  
+nvm alias default 14  
+npm install -g yarn  
+npm install -g --force npx  
+alias pj='npx projen'  
+```
+
+## Source Code Folder
+src/
+Don't touch code in lib/ which generates by projen.
 
 
 ## Cloud9 TypeScript Formatter
@@ -33,8 +39,9 @@ npx projen deploy-hotswap
 https://github.com/projen/projen
 
 
-Input format for CorrectPdfOrientationStateMachine and AssignmentsTextractStateMachine
+Input format for AssignmentsTextractStateMachine
 
 <code>{
-"key": "cywong@vtc.vtc.edu.hk/IT41213Testscript.pdf"
+"standardAnswerKey": "cywong@vtc.vtc.edu.hk/IT41213TestAnswer.pdf",
+"scriptsKey": "cywong@vtc.vtc.edu.hk/IT41213Testscript.pdf"
 }</code>
