@@ -12,6 +12,7 @@ const project = new AwsCdkTypeScriptApp({
   cdkDependencies: [
     '@aws-cdk/aws-s3',
     '@aws-cdk/aws-dynamodb',
+    '@aws-cdk/aws-ecr',
     '@aws-cdk/aws-lambda',
     '@aws-cdk/aws-sns',
     '@aws-cdk/aws-sns-subscriptions',
