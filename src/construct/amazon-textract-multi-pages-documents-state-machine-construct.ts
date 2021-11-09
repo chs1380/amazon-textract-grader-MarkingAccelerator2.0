@@ -45,7 +45,7 @@ export class AmazonTextractMultiPagesDocumentsStateMachineConstruct extends Cons
             Name: sfn.JsonPath.stringAt('$.key'),
           },
         },
-        FeatureTypes: ['FORMS'],
+        FeatureTypes: ['FORMS', 'TABLES'],
         JobTag: sfn.JsonPath.stringAt('$$.Execution.Name'),
         // NotificationChannel: {
         //   RoleArn: textractExecutionRole.roleArn,

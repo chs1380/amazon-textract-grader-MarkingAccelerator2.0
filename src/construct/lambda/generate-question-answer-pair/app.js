@@ -8,14 +8,13 @@ const {
   QueryCommand,
 } = require('@aws-sdk/lib-dynamodb');
 
-exports.lambdaHandler = async (event, context) => {
+exports.lambdaHandler = async (event) => {
   const textractPrefix = event.textractPrefix;
   const key = event.key;
   const filePath = '/tmp/' + key;
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 
   const keyValues = await getKeyValueRelationship(textractPrefix);
-  console.log(keyValues);
   const keyValuePairJson = key.replace('.pdf', '_keyValue.json');
   await s3.putObject({
     Bucket: process.env['DestinationBucket'],
@@ -24,7 +23,7 @@ exports.lambdaHandler = async (event, context) => {
     ContentType: 'application/json',
   }).promise();
   event.keyValuePairJson = keyValuePairJson;
-
+  // console.log(JSON.stringify(keyValues));
   return event;
 };
 
@@ -63,16 +62,20 @@ const getKeyValueRelationship = async (textractPrefix) => {
   const valueMap = new Map();
   items.map(obj => valueMap.set(obj.Id, obj));
 
+  items = await queryBlockItems(textractPrefix + '###tableMap');
+  const tableMap = new Map();
+  items.map(obj => tableMap.set(obj.Id, obj));
+
   items = await queryBlockItems(textractPrefix + '###blockMap');
   const blockMap = new Map();
   items.map(obj => blockMap.set(obj.Id, obj));
   console.log('blockMap' + items.length);
 
-  return keyItems
-  .map(keyitem => {
+  let formResults = keyItems
+  .map(keyItem => {
     return {
-      blockId: keyitem.Id,
-      keyBlock: keyitem,
+      blockId: keyItem.Id,
+      keyBlock: keyItem,
     };
   })
   .map(c => {
@@ -94,6 +97,90 @@ const getKeyValueRelationship = async (textractPrefix) => {
     };
   })
   .filter(c => c.key !== '');
+
+  const isSubsetOfChoice = subset => {
+    const choices = new Set(['a', 'b', 'c', 'd', 'e', 'yes', 'no']);
+    for (let elem of subset) {
+      if (!choices.has(elem)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  //Handle table https://docs.aws.amazon.com/textract/latest/dg/how-it-works-selectables.html
+  let tableResults = Array.from(tableMap).map(([key, value]) => ({
+    key,
+    value,
+  }))
+  .map(c => ({
+    tableId: c.key,
+    cells: c.value.Relationships[0].Ids.map(id => blockMap.get(id)),
+  })) //Children
+  .map(c => ({
+    tableId: c.tableId,
+    cells: c.cells.filter(cell => cell.Relationships !== null),
+  })) //remove empty cell and it should be the first row and first col cell.
+  .map(c => ({
+    tableId: c.tableId,
+    contents: c.cells.map(cell => ({
+      row: cell.RowIndex,
+      col: cell.ColumnIndex,
+      content: blockMap.get(cell.Relationships[0].Ids[0]),
+    })),
+  })) // Word or Selection Element
+  .map(c => ({
+    tableId: c.tableId,
+    contents: c.contents,
+    questions: c.contents.filter(t => t.col === 1).map(t => ({
+      row: t.row,
+      col: t.col,
+      key: t.content.Text,
+      keyGeometry: t.content.Geometry,
+      keyConfidence: t.content.Confidence,
+      page: t.content.Page,
+    })),
+    possibleAnswer: c.contents.filter(t => t.row === 1).map(t => ({
+      row: t.row,
+      col: t.col,
+      text: t.content.Text,
+    })),
+    possibleAnswerText: new Set(c.contents.filter(t => t.row === 1).map(t => t.content.Text.toLowerCase())),
+  })) // First col is questions and first row is possible answer.
+  .filter(c => isSubsetOfChoice(c.possibleAnswerText))
+  .map(c => ({
+    tableId: c.tableId,
+    contents: c.contents,
+    questions: c.questions,
+    possibleAnswer: c.possibleAnswer,
+    questionAndAnswer: c.questions.reduce((acc, curr) => {
+      let z = c.possibleAnswer.map(a => ({
+        key: curr.key + '-' + a.text,
+        keyGeometry: curr.keyGeometry,
+        keyConfidence: curr.keyConfidence,
+        page: curr.page,
+        checkboxes: c.contents.filter(f => f.row === curr.row && f.col === a.col),
+      }))
+      .map(a => ({
+        key: a.key,
+        keyGeometry: a.keyGeometry,
+        keyConfidence: a.keyConfidence,
+        page: a.page,
+        val: a.checkboxes.length === 1 && a.checkboxes[0].content.SelectionStatus === 'SELECTED' ? 'X' : '', //single value!
+        valGeometry: a.checkboxes.length === 1 ? a.checkboxes[0].content.Geometry : null,
+        valueConfidence: a.checkboxes.length === 1 ? a.checkboxes[0].content.Confidence : 1,
+      }));
+      acc.push(z);
+      return acc;
+    }, []),
+  }))
+  .reduce((acc, curr) => {
+    curr.questionAndAnswer.forEach(a => acc.push(a));
+    // acc = acc.concat(curr.questionAndAnswer);
+    return acc;
+  }, []);
+
+  return [].concat(formResults).concat(tableResults[0]);
 };
 
 

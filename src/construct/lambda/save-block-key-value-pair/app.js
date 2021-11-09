@@ -6,7 +6,7 @@ const path = require('path');
 const { ddbDocClient } = require('./ddbDocClient');
 const { PutCommand } = require('@aws-sdk/lib-dynamodb');
 
-exports.lambdaHandler = async(event, context) => {
+exports.lambdaHandler = async(event) => {
   const key = event.key;
   const filePath = '/tmp/' + key;
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -64,11 +64,22 @@ const saveKeyValueMap = async(textractResults, prefix, expirationTime) => {
   .filter(b => b.block.BlockType === 'KEY_VALUE_SET')
   .map(async(obj) => {
     if (obj.block['EntityTypes'].includes('KEY')) {
-      await saveBlockItem(prefix + '###keyMap', obj.id, obj.block, expirationTime);
+      return await saveBlockItem(prefix + '###keyMap', obj.id, obj.block, expirationTime);
     }
     else {
       return await saveBlockItem(prefix + '###valueMap', obj.id, obj.block, expirationTime);
     }
+  }));
+
+  await Promise.all(blocks.map(block => {
+    return {
+      id: block.Id,
+      block,
+    };
+  })
+  .filter(b => b.block.BlockType === 'TABLE')
+  .map(async(obj) => {
+    return await saveBlockItem(prefix + '###tableMap', obj.id, obj.block, expirationTime);
   }));
   console.log("blockMap:" + r.length);
   console.log("keyMap+valueMap:" + l.length);
