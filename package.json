@@ -57,7 +57,8 @@
     "@aws-cdk/aws-sns-subscriptions": "^1.131.0",
     "@aws-cdk/aws-stepfunctions": "^1.131.0",
     "@aws-cdk/aws-stepfunctions-tasks": "^1.131.0",
-    "@aws-cdk/core": "^1.131.0"
+    "@aws-cdk/core": "^1.131.0",
+    "nvm": "^0.0.4"
   },
   "bundledDependencies": [],
   "keywords": [

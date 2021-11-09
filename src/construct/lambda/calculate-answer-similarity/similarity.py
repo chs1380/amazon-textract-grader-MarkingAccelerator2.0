@@ -1,10 +1,11 @@
 from sentence_transformers import SentenceTransformer, util
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# model = SentenceTransformer('all-MiniLM-L6-v2',cache_folder="/tmp/")
+model = SentenceTransformer('./model',cache_folder="/tmp/")
 
 
 def handler(event, context):
-    sentences = event.studentAnswer + event.standardAnswer
+    sentences = event["studentAnswer"] + event["standardAnswer"]
 
     # Compute embeddings
     embeddings = model.encode(sentences, convert_to_tensor=True)

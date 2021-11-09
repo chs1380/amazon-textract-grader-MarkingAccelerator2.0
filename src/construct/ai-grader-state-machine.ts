@@ -21,7 +21,7 @@ export class AiGraderStateMachineConstruct extends Construct {
 
     new lambda.DockerImageFunction(this, 'Text Similarity', {
       code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '/lambda/calculate-answer-similarity'), {
-        cmd: ['similarity.py'],
+        cmd: ['similarity.handler'],
       }),
       memorySize: 8096,
       timeout: Duration.seconds(600),

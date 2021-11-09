@@ -15,18 +15,22 @@ RUN apt-get update && \
   unzip \
   libcurl4-openssl-dev
 
-
 # Create function directory
 RUN mkdir -p ${FUNCTION_DIR}
-
-# Copy handler function
-COPY *.py ${FUNCTION_DIR}
 
 # Install the function's dependencies
 RUN pip uninstall --yes jupyter
 RUN pip install --target ${FUNCTION_DIR} awslambdaric
 RUN pip install --target ${FUNCTION_DIR} sentencepiece protobuf
 RUN pip install --target ${FUNCTION_DIR} sentence-transformers
+
+# Get Model
+COPY get_model.py ${FUNCTION_DIR}
+RUN mkdir -p ${FUNCTION_DIR}/model
+RUN cd ${FUNCTION_DIR}/ && python3 get_model.py
+
+# Copy handler function
+COPY similarity.py ${FUNCTION_DIR}
 
 FROM huggingface/transformers-pytorch-cpu
 
@@ -37,8 +41,8 @@ WORKDIR ${FUNCTION_DIR}
 
 # Copy in the built dependencies
 COPY --from=build-image ${FUNCTION_DIR} ${FUNCTION_DIR}
-
-ENTRYPOINT [ "python3", "-m", "awslambdaric" ]
+ENV PYTHONIOENCODING utf-8
+ENTRYPOINT ["python3", "-m", "awslambdaric" ]
 
 # This will get replaced by the proper handler by the CDK script
 CMD [ "similarity.handler" ]
