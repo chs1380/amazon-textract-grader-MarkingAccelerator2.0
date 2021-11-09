@@ -154,7 +154,7 @@ const getKeyValueRelationship = async (textractPrefix) => {
     questions: c.questions,
     possibleAnswer: c.possibleAnswer,
     questionAndAnswer: c.questions.reduce((acc, curr) => {
-      let z = c.possibleAnswer.map(a => ({
+      c.possibleAnswer.map(a => ({
         key: curr.key + '-' + a.text,
         keyGeometry: curr.keyGeometry,
         keyConfidence: curr.keyConfidence,
@@ -169,8 +169,8 @@ const getKeyValueRelationship = async (textractPrefix) => {
         val: a.checkboxes.length === 1 && a.checkboxes[0].content.SelectionStatus === 'SELECTED' ? 'X' : '', //single value!
         valGeometry: a.checkboxes.length === 1 ? a.checkboxes[0].content.Geometry : null,
         valueConfidence: a.checkboxes.length === 1 ? a.checkboxes[0].content.Confidence : 1,
-      }));
-      acc.push(z);
+      }))
+      .forEach(a => acc.push(a));
       return acc;
     }, []),
   }))
@@ -180,7 +180,7 @@ const getKeyValueRelationship = async (textractPrefix) => {
     return acc;
   }, []);
 
-  return [].concat(formResults).concat(tableResults[0]);
+  return [].concat(formResults).concat(tableResults);
 };
 
 
