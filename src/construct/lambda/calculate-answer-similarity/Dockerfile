@@ -27,7 +27,6 @@ RUN pip uninstall --yes jupyter
 RUN pip install --target ${FUNCTION_DIR} awslambdaric
 RUN pip install --target ${FUNCTION_DIR} sentencepiece protobuf
 RUN pip install --target ${FUNCTION_DIR} sentence-transformers
-RUN python -c 'from sentence-transformers import SentenceTransformer; embedder = SentenceTransformer("all-MiniLM-L6-v2")'
 
 FROM huggingface/transformers-pytorch-cpu
 

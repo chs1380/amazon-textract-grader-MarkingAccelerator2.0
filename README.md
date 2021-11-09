@@ -11,6 +11,7 @@ nvm alias default 14
 npm install -g yarn  
 npm install -g --force npx  
 alias pj='npx projen'  
+bash <(curl -sL https://gist.githubusercontent.com/wongcyrus/a4e726b961260395efa7811cab0b4516/raw/490162cebcaa44210bb2eab0e6883e57fd880a27/resize.sh) 50
 ```
 
 ## Source Code Folder
