@@ -1,10 +1,19 @@
 from sentence_transformers import SentenceTransformer, util
+import boto3
+import json, os
 
+s3 = boto3.resource('s3')
 model = SentenceTransformer('./model',cache_folder="/tmp/")
 
 def handler(event, context):
-    sentences = event["studentAnswer"]
-    sentences.insert(0,event["standardAnswer"])
+    
+    if "key" in event:
+        content_object = s3.Object(os.environ['DestinationBucket'], event["key"])
+        file_content = content_object.get()['Body'].read().decode('utf-8')
+        sentences = json.loads(file_content)
+    else:
+        sentences = event["studentAnswer"]
+        sentences.insert(0,event["standardAnswer"])
 
     # Compute embeddings
     embeddings = model.encode(sentences, convert_to_tensor=True)
