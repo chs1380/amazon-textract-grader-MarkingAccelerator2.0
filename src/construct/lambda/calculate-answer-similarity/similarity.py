@@ -5,7 +5,6 @@ model = SentenceTransformer('./model',cache_folder="/tmp/")
 def handler(event, context):
     sentences = event["studentAnswer"]
     sentences.insert(0,event["standardAnswer"])
-    print(sentences)
 
     # Compute embeddings
     embeddings = model.encode(sentences, convert_to_tensor=True)

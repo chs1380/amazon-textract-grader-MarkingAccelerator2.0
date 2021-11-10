@@ -21,7 +21,6 @@ RUN mkdir -p ${FUNCTION_DIR}
 # Install the function's dependencies
 RUN pip uninstall --yes jupyter
 RUN pip install --target ${FUNCTION_DIR} awslambdaric
-RUN pip install --target ${FUNCTION_DIR} sentencepiece protobuf
 RUN pip install --target ${FUNCTION_DIR} sentence-transformers
 
 # Get Model
