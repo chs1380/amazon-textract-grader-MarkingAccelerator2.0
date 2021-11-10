@@ -13,9 +13,9 @@ def handler(event, context):
     cosine_scores = util.pytorch_cos_sim(embeddings, embeddings)
 
     # Find the pairs with the highest cosine similarity scores
-    pairs = {}
+    pairs = []
     for j in range(1, len(cosine_scores)):
-        pairs[sentences[j]] = float(cosine_scores[0][j])
+        pairs.append(float(cosine_scores[0][j]))
 
     return pairs
 
