@@ -26,5 +26,6 @@ def handler(event, context):
     for j in range(1, len(cosine_scores)):
         pairs.append(float(cosine_scores[0][j]))
 
-    return pairs
+    event["similarity"]=pairs
+    return event
 
