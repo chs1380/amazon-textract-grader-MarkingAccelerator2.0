@@ -5,7 +5,7 @@ import { Bucket } from '@aws-cdk/aws-s3';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import { StateMachine } from '@aws-cdk/aws-stepfunctions';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
-import { Construct, Duration } from '@aws-cdk/core';
+import { Construct, Duration, RemovalPolicy } from '@aws-cdk/core';
 import { LambdaHelper } from './lib/lambda-helper';
 
 export interface TransformFormResultStateMachineConstructProps {
@@ -37,6 +37,7 @@ export class TransformFormResultStateMachineConstruct extends Construct {
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       timeToLiveAttribute: 'ttl',
+      removalPolicy: RemovalPolicy.DESTROY,
     });
     this.textractBlockTable.addGlobalSecondaryIndex({
       indexName: 'BlockId',
