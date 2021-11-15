@@ -3,7 +3,7 @@ const project = new AwsCdkTypeScriptApp({
   authorName: 'Cyrus Wong',
   authorEmail: 'cywong@vtc.edu.hk',
   repository: 'https://github.com/wongcyrus/amazon-textract-grader',
-  cdkVersion: '1.131.0',
+  cdkVersion: '1.132.0',
   defaultReleaseBranch: 'main',
   name: 'amazon-textract-grader',
   context: {

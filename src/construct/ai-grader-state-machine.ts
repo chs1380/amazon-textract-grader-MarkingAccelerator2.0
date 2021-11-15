@@ -26,13 +26,7 @@ export class AiGraderStateMachineConstruct extends Construct {
     this.pdfSourceBucket = props.pdfSourceBucket;
     this.destinationBucket = props.destinationBucket;
 
-    new lambda.DockerImageFunction(this, 'Text Similarity', {
-      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '/lambda/calculate-answer-similarity'), {
-        cmd: ['similarity.handler'],
-      }),
-      memorySize: 8096,
-      timeout: Duration.seconds(600),
-    });
+
     const readStandardAnswerJson = new tasks.CallAwsService(this, 'ReadStandardAnswerJson', {
       service: 's3',
       action: 'getObject',
@@ -52,7 +46,31 @@ export class AiGraderStateMachineConstruct extends Construct {
     this.destinationBucket.grantReadWrite(joinAnswerFunction);
     const joinAnswerTask = this.lambdaHelper.getLambdaInvokeTask(joinAnswerFunction);
 
-    const definition = readStandardAnswerJson.next(joinAnswerTask);
+    const calculateTextSimilarityFunction = new lambda.DockerImageFunction(this, 'Calculate Text Similarity Function', {
+      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '/lambda/calculate-answer-similarity'), {
+        cmd: ['similarity.handler'],
+      }),
+      memorySize: 8096,
+      timeout: Duration.seconds(600),
+      environment: {
+        DestinationBucket: this.destinationBucket.bucketName,
+      },
+    });
+    this.destinationBucket.grantReadWrite(calculateTextSimilarityFunction);
+
+    const textSimilarityTask = this.lambdaHelper.getLambdaInvokeTask(calculateTextSimilarityFunction);
+    const mapAnswerKey = new sfn.Map(this, 'Parallel Process Answer', {
+      maxConcurrency: 3,
+      itemsPath: sfn.JsonPath.stringAt('$.matchResults'),
+      parameters: {
+        question: sfn.JsonPath.stringAt('$$.Map.Item.Value.question'),
+        key: sfn.JsonPath.stringAt('$$.Map.Item.Value.s3Key'),
+      },
+      resultPath: sfn.JsonPath.DISCARD, //Discard the Result and Keep the Original Input.
+    });
+    mapAnswerKey.iterator(textSimilarityTask);
+
+    const definition = readStandardAnswerJson.next(joinAnswerTask).next(mapAnswerKey);
 
     this.stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definition,

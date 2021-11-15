@@ -4,9 +4,9 @@ const s3 = new AWS.S3();
 const fs = require('fs');
 const path = require('path');
 const { ddbDocClient } = require('./ddbDocClient');
-const { PutCommand } = require('@aws-sdk/lib-dynamodb');
+const { BatchWriteCommand } = require('@aws-sdk/lib-dynamodb');
 
-exports.lambdaHandler = async(event) => {
+exports.lambdaHandler = async (event) => {
   const key = event.key;
   const filePath = '/tmp/' + key;
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -24,37 +24,53 @@ exports.lambdaHandler = async(event) => {
   return event;
 };
 
-const saveBlockItem = async(id, sortKey, block, expirationTime) => {
-  const item = block;
-  block['Pk'] = id;
-  block['Sk'] = sortKey;
-  block['ttl'] = expirationTime;
-  const params = {
-    TableName: process.env['TextractBlockTable'],
-    Item: item
-  };
-  try {
-    return await ddbDocClient.send(new PutCommand(params));
+const saveBlockItem = async (id, sortKey, block, expirationTime, buffer, flush) => {
+  if (!flush) {
+    const item = block;
+    block['Pk'] = id;
+    block['Sk'] = sortKey;
+    block['ttl'] = expirationTime;
+    buffer.push(item);
   }
-  catch (err) {
-    console.error('Error', err);
-    throw err;
+
+  if ((buffer.length >= 25 || flush) && buffer.length > 0) {
+    let params = {
+      RequestItems: {},
+    };
+    params.RequestItems[process.env['TextractBlockTable']] = buffer.map(Item => ({
+      PutRequest: {
+        Item,
+      },
+    }));
+    try {
+      console.log('BatchWriteCommand -> ' + buffer.length);
+      buffer.splice(0, buffer.length);
+      return await ddbDocClient.send(new BatchWriteCommand(params));
+    } catch (err) {
+      console.error('Error', err);
+      throw err;
+    }
   }
 };
 
 
-const saveKeyValueMap = async(textractResults, prefix, expirationTime) => {
+const saveKeyValueMap = async (textractResults, prefix, expirationTime) => {
   const blocks = textractResults.Blocks;
+
+  const blockMapBuffer = [];
   const r = await Promise.all(blocks.map(block => {
     return {
       id: block.Id,
       block,
     };
   })
-  .map(async(obj) => {
-    return await saveBlockItem(prefix + '###blockMap', obj.id, obj.block, expirationTime);
+  .map(async (obj) => {
+    return await saveBlockItem(prefix + '###blockMap', obj.id, obj.block, expirationTime, blockMapBuffer, false);
   }));
+  await saveBlockItem(prefix + '###blockMap', undefined, undefined, undefined, blockMapBuffer, true);
 
+  const keyMapBuffer = [];
+  const valueMapBuffer = [];
   const l = await Promise.all(blocks.map(block => {
     return {
       id: block.Id,
@@ -62,15 +78,18 @@ const saveKeyValueMap = async(textractResults, prefix, expirationTime) => {
     };
   })
   .filter(b => b.block.BlockType === 'KEY_VALUE_SET')
-  .map(async(obj) => {
+  .map(async (obj) => {
     if (obj.block['EntityTypes'].includes('KEY')) {
-      return await saveBlockItem(prefix + '###keyMap', obj.id, obj.block, expirationTime);
-    }
-    else {
-      return await saveBlockItem(prefix + '###valueMap', obj.id, obj.block, expirationTime);
+      return await saveBlockItem(prefix + '###keyMap', obj.id, obj.block, expirationTime, keyMapBuffer, false);
+    } else {
+      return await saveBlockItem(prefix + '###valueMap', obj.id, obj.block, expirationTime, valueMapBuffer, false);
     }
   }));
 
+  await saveBlockItem(prefix + '###keyMap', undefined, undefined, undefined, keyMapBuffer, true);
+  await saveBlockItem(prefix + '###valueMap', undefined, undefined, undefined, valueMapBuffer, true);
+
+  const tableMapBuffer = [];
   await Promise.all(blocks.map(block => {
     return {
       id: block.Id,
@@ -78,14 +97,16 @@ const saveKeyValueMap = async(textractResults, prefix, expirationTime) => {
     };
   })
   .filter(b => b.block.BlockType === 'TABLE')
-  .map(async(obj) => {
-    return await saveBlockItem(prefix + '###tableMap', obj.id, obj.block, expirationTime);
+  .map(async (obj) => {
+    return await saveBlockItem(prefix + '###tableMap', obj.id, obj.block, expirationTime, tableMapBuffer, false);
   }));
-  console.log("blockMap:" + r.length);
-  console.log("keyMap+valueMap:" + l.length);
+  await saveBlockItem(prefix + '###tableMap', undefined, undefined, undefined, tableMapBuffer, true);
+
+  console.log('blockMap:' + r.length);
+  console.log('keyMap+valueMap:' + l.length);
 };
 
-const s3download = async(bucketName, keyName, localDest) => {
+const s3download = async (bucketName, keyName, localDest) => {
   if (typeof localDest == 'undefined') {
     localDest = keyName;
   }
