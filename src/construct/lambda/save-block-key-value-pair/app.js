@@ -24,86 +24,99 @@ exports.lambdaHandler = async (event) => {
   return event;
 };
 
-const saveBlockItem = async (id, sortKey, block, expirationTime, buffer, flush) => {
-  if (!flush) {
-    const item = block;
-    block['Pk'] = id;
-    block['Sk'] = sortKey;
-    block['ttl'] = expirationTime;
-    buffer.push(item);
-  }
-
-  if ((buffer.length >= 25 || flush) && buffer.length > 0) {
-    let params = {
-      RequestItems: {},
-    };
+const saveBlockItem = async (buffer, unprocessedItems) => {
+  let params = {
+    RequestItems: {},
+  };
+  if (buffer) {
     params.RequestItems[process.env['TextractBlockTable']] = buffer.map(Item => ({
       PutRequest: {
         Item,
       },
     }));
-    try {
-      console.log('BatchWriteCommand -> ' + buffer.length);
-      buffer.splice(0, buffer.length);
-      return await ddbDocClient.send(new BatchWriteCommand(params));
-    } catch (err) {
-      console.error('Error', err);
-      throw err;
+  } else if (unprocessedItems) {
+    params.RequestItems = unprocessedItems;
+  }
+  try {
+    const result = await ddbDocClient.send(new BatchWriteCommand(params));
+    console.log(result);
+    if (Object.keys(result.UnprocessedItems).length !== 0) {
+      await saveBlockItem(undefined, result.UnprocessedItems);
     }
+  } catch (err) {
+    console.error('Error', err);
+    throw err;
   }
 };
 
+const getBlock = (id, sortKey, block, expirationTime) => {
+  const item = block;
+  block['Pk'] = id;
+  block['Sk'] = sortKey;
+  block['ttl'] = expirationTime;
+  return item;
+};
+
+const chunkArray = (array, chunkSize) => {
+  return Array.from({ length: Math.ceil(array.length / chunkSize) },
+    (_, index) => array.slice(index * chunkSize, (index + 1) * chunkSize),
+  );
+};
 
 const saveKeyValueMap = async (textractResults, prefix, expirationTime) => {
   const blocks = textractResults.Blocks;
 
-  const blockMapBuffer = [];
-  const r = await Promise.all(blocks.map(block => {
+  const blockMapList = blocks.map(block => {
     return {
       id: block.Id,
       block,
     };
   })
-  .map(async (obj) => {
-    return await saveBlockItem(prefix + '###blockMap', obj.id, obj.block, expirationTime, blockMapBuffer, false);
-  }));
-  await saveBlockItem(prefix + '###blockMap', undefined, undefined, undefined, blockMapBuffer, true);
+  .map(obj => {
+    return getBlock(prefix + '###blockMap', obj.id, obj.block, expirationTime);
+  });
 
-  const keyMapBuffer = [];
-  const valueMapBuffer = [];
-  const l = await Promise.all(blocks.map(block => {
+  let chunks = chunkArray(blockMapList, 25);
+  for (const chunk of chunks) {
+    await saveBlockItem(chunk);
+  }
+
+  const keyValueMapList = blocks.map(block => {
     return {
       id: block.Id,
       block,
     };
   })
   .filter(b => b.block.BlockType === 'KEY_VALUE_SET')
-  .map(async (obj) => {
+  .map(obj => {
     if (obj.block['EntityTypes'].includes('KEY')) {
-      return await saveBlockItem(prefix + '###keyMap', obj.id, obj.block, expirationTime, keyMapBuffer, false);
+      return getBlock(prefix + '###keyMap', obj.id, obj.block, expirationTime);
     } else {
-      return await saveBlockItem(prefix + '###valueMap', obj.id, obj.block, expirationTime, valueMapBuffer, false);
+      return getBlock(prefix + '###valueMap', obj.id, obj.block, expirationTime);
     }
-  }));
+  });
+  chunks = chunkArray(keyValueMapList, 25);
+  for (const chunk of chunks) {
+    await saveBlockItem(chunk);
+  }
 
-  await saveBlockItem(prefix + '###keyMap', undefined, undefined, undefined, keyMapBuffer, true);
-  await saveBlockItem(prefix + '###valueMap', undefined, undefined, undefined, valueMapBuffer, true);
-
-  const tableMapBuffer = [];
-  await Promise.all(blocks.map(block => {
+  const tableMapList = blocks.map(block => {
     return {
       id: block.Id,
       block,
     };
   })
   .filter(b => b.block.BlockType === 'TABLE')
-  .map(async (obj) => {
-    return await saveBlockItem(prefix + '###tableMap', obj.id, obj.block, expirationTime, tableMapBuffer, false);
-  }));
-  await saveBlockItem(prefix + '###tableMap', undefined, undefined, undefined, tableMapBuffer, true);
+  .map(obj => {
+    return getBlock(prefix + '###tableMap', obj.id, obj.block, expirationTime);
+  });
 
-  console.log('blockMap:' + r.length);
-  console.log('keyMap+valueMap:' + l.length);
+  chunks = chunkArray(tableMapList, 25);
+  for (const chunk of chunks) {
+    await saveBlockItem(chunk);
+  }
+
+  console.log('block:' + blocks.length + ' blockMap:' + blockMapList.length + ' keyMap+valueMap:' + keyValueMapList.length + ' tableMap:' + tableMapList.length);
 };
 
 const s3download = async (bucketName, keyName, localDest) => {
