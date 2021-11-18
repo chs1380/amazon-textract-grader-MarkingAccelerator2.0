@@ -3,6 +3,7 @@ import * as sfn from '@aws-cdk/aws-stepfunctions';
 import { IntegrationPattern, StateMachine, TaskInput } from '@aws-cdk/aws-stepfunctions';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
 import { Construct, Duration } from '@aws-cdk/core';
+import { AiGraderStateMachineConstruct } from './ai-grader-state-machine';
 import { AmazonTextractMultiPagesDocumentsStateMachineConstruct } from './amazon-textract-multi-pages-documents-state-machine-construct';
 import { CorrectPdfOrientationStateMachineConstruct } from './correct-pdf-orientation-state-machine-construct';
 import { TransformFormResultStateMachineConstruct } from './transform-form-result-state-machine-construct';
@@ -35,6 +36,12 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       destinationBucket: pdfDestinationBucket,
     });
 
+    const aiGraderStateMachineConstruct = new AiGraderStateMachineConstruct(this, 'AiGraderStateMachineConstruct', {
+      pdfSourceBucket,
+      destinationBucket: pdfDestinationBucket,
+    });
+
+
     const scriptsCorrectPdfOrientationStateMachineExecution = this.getStateMachineExecution(
       'ScriptsCorrectPdfOrientationStateMachineExecution', correctPdfOrientationStateMachineConstruct.stateMachine);
     const answerCorrectPdfOrientationStateMachineExecution = this.getStateMachineExecution(
@@ -51,6 +58,9 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
 
     const scriptsTransformFormResultStateMachineExecution = this.getStateMachineExecution(
       'ScriptsTransformFormResultStateMachineExecution', transformFormResultStateMachineConstruct.stateMachine, '$.Output');
+
+    const aiGraderStateMachineExecution = this.getStateMachineExecution(
+      'AiGraderStateMachineExecution', aiGraderStateMachineConstruct.stateMachine, '$.Output');
 
     const start = new sfn.Pass(this, 'StartPass');
     const standardAnswerPass = new sfn.Pass(this, 'StandardAnswerPass', {
@@ -81,7 +91,7 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       .next(answerCorrectPdfOrientationStateMachineExecution)
       .next(answerAmazonTextractMultiPagesDocumentsStateMachineExecution)
       .next(answerTransformFormResultStateMachineExecution));
-    const definition = start.next(parallel);
+    const definition = start.next(parallel).next(aiGraderStateMachineExecution);
 
     this.stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definition,

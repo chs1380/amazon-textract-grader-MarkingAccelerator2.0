@@ -1,6 +1,6 @@
 import { Bucket } from '@aws-cdk/aws-s3';
 import { App, CfnOutput, Construct, RemovalPolicy, Stack, StackProps } from '@aws-cdk/core';
-import { AiGraderStateMachineConstruct } from './construct/ai-grader-state-machine';
+
 import { AssignmentsTextractStateMachineConstruct } from './construct/assignments-textract-state-machine';
 
 export class AmazonTextractGraderStack extends Stack {
@@ -21,10 +21,6 @@ export class AmazonTextractGraderStack extends Stack {
       pdfDestinationBucket,
     });
 
-    new AiGraderStateMachineConstruct(this, 'AiGraderStateMachineConstruct', {
-      pdfSourceBucket,
-      destinationBucket: pdfDestinationBucket,
-    });
 
     new CfnOutput(this, 'PdfSourceBucketOutput', {
       value: pdfSourceBucket.bucketName,
