@@ -60,7 +60,7 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       'ScriptsTransformFormResultStateMachineExecution', transformFormResultStateMachineConstruct.stateMachine, '$.Output');
 
     const aiGraderStateMachineExecution = this.getStateMachineExecution(
-      'AiGraderStateMachineExecution', aiGraderStateMachineConstruct.stateMachine, '$.Output');
+      'AiGraderStateMachineExecution', aiGraderStateMachineConstruct.stateMachine, '$');
 
     const start = new sfn.Pass(this, 'StartPass');
     const standardAnswerPass = new sfn.Pass(this, 'StandardAnswerPass', {

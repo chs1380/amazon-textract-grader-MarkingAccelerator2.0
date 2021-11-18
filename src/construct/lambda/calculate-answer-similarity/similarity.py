@@ -6,7 +6,7 @@ s3 = boto3.resource('s3')
 model = SentenceTransformer('./model',cache_folder="/tmp/")
 
 def handler(event, context):
-    
+
     if "key" in event:
         content_object = s3.Object(os.environ['DestinationBucket'], event["key"])
         file_content = content_object.get()['Body'].read().decode('utf-8')
@@ -23,7 +23,7 @@ def handler(event, context):
 
     # Find the pairs with the highest cosine similarity scores
     pairs = []
-    for j in range(1, len(cosine_scores)):
+    for j in range(0, len(cosine_scores)):
         pairs.append(float(cosine_scores[0][j]))
 
     event["similarity"]=pairs

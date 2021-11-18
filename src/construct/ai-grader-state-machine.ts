@@ -58,6 +58,13 @@ export class AiGraderStateMachineConstruct extends Construct {
     });
     this.destinationBucket.grantReadWrite(calculateTextSimilarityFunction);
 
+    //save-answer-similarity
+
+    const saveAnswerSimilarityFunction = this.getLambdaFunction('save-answer-similarity',
+      []);
+    this.destinationBucket.grantReadWrite(saveAnswerSimilarityFunction);
+    const saveAnswerSimilarityTask = this.lambdaHelper.getLambdaInvokeTask(saveAnswerSimilarityFunction);
+
     const textSimilarityTask = this.lambdaHelper.getLambdaInvokeTask(calculateTextSimilarityFunction);
     const mapAnswerKey = new sfn.Map(this, 'Parallel Process Answer', {
       maxConcurrency: 3,
@@ -68,7 +75,7 @@ export class AiGraderStateMachineConstruct extends Construct {
       },
       resultPath: sfn.JsonPath.DISCARD, //Discard the Result and Keep the Original Input.
     });
-    mapAnswerKey.iterator(textSimilarityTask);
+    mapAnswerKey.iterator(textSimilarityTask.next(saveAnswerSimilarityTask));
 
     const definition = readStandardAnswerJson.next(joinAnswerTask).next(mapAnswerKey);
 
