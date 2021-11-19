@@ -25,7 +25,7 @@ exports.lambdaHandler = async (event) => {
 
   await s3.putObject({
     Bucket: process.env['DestinationBucket'],
-    Key: key.replace(".json","_similarity.json"),
+    Key: key.replace('.json', '_similarity.json'),
     Body: JSON.stringify(results),
     ContentType: 'application/json',
   }).promise();

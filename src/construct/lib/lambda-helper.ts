@@ -27,8 +27,8 @@ export class LambdaHelper {
 
   public getLambdaFunction(assetPath: string, layers: ILayerVersion[], environment: {
     [key: string]: string;
-  }) {
-    const functionName = assetPath.split('-').map(c => c.charAt(0).toUpperCase() + c.substring(1).toLowerCase()).join('') + 'Function';
+  }, suffix: string = '') {
+    const functionName = assetPath.split('-').map(c => c.charAt(0).toUpperCase() + c.substring(1).toLowerCase()).join('') + suffix + 'Function';
     const namePrefix = this._scope.node.tryGetContext('namePrefix');
     return new lambda.Function(this._scope, functionName, {
       functionName: namePrefix + functionName,

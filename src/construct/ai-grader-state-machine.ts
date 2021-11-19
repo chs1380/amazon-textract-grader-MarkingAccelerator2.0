@@ -65,6 +65,11 @@ export class AiGraderStateMachineConstruct extends Construct {
     this.destinationBucket.grantReadWrite(saveAnswerSimilarityFunction);
     const saveAnswerSimilarityTask = this.lambdaHelper.getLambdaInvokeTask(saveAnswerSimilarityFunction);
 
+    const jsonToExcelFunction = this.getLambdaFunction('json-to-excel',
+      [], 'Similarity');
+    this.destinationBucket.grantReadWrite(jsonToExcelFunction);
+    const jsonToExcelTask = this.lambdaHelper.getLambdaInvokeTask(jsonToExcelFunction);
+
     const textSimilarityTask = this.lambdaHelper.getLambdaInvokeTask(calculateTextSimilarityFunction);
     const mapAnswerKey = new sfn.Map(this, 'Parallel Process Answer', {
       maxConcurrency: 3,
@@ -77,7 +82,7 @@ export class AiGraderStateMachineConstruct extends Construct {
     });
     mapAnswerKey.iterator(textSimilarityTask.next(saveAnswerSimilarityTask));
 
-    const definition = readStandardAnswerJson.next(joinAnswerTask).next(mapAnswerKey);
+    const definition = readStandardAnswerJson.next(joinAnswerTask).next(mapAnswerKey).next(jsonToExcelTask);
 
     this.stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definition,
@@ -86,11 +91,11 @@ export class AiGraderStateMachineConstruct extends Construct {
 
   }
 
-  private getLambdaFunction(assetPath: string, layers: ILayerVersion[]) {
+  private getLambdaFunction(assetPath: string, layers: ILayerVersion[], suffix: string = '') {
     const environment = {
       SourceBucket: this.pdfSourceBucket.bucketName,
       DestinationBucket: this.destinationBucket.bucketName,
     };
-    return this.lambdaHelper.getLambdaFunction(assetPath, layers, environment);
+    return this.lambdaHelper.getLambdaFunction(assetPath, layers, environment, suffix);
   }
 }
