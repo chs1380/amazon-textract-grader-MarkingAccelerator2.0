@@ -42,7 +42,7 @@ exports.lambdaHandler = async (event) => {
       acc.set(curr.question, new Map(Object.entries(curr.similarity)));
       return acc;
     }, new Map());
-    console.log(questionAnswerSimilarityMap);
+    //console.log(questionAnswerSimilarityMap);
   }
 
   popularPageSheet(
@@ -80,7 +80,6 @@ exports.lambdaHandler = async (event) => {
   await saveMapToS3(documentValuePairsKey, documentValuePairs);
   await saveMapToS3(documentAnswerGeometryPairsKey, documentAnswerGeometryPairs);
   await saveMapToS3(documentSimilarityPairsKey, documentSimilarityPairs);
-  //await saveMapToS3(questionAnswerSimilarityMapKey, questionAnswerSimilarityMap);
 
   const mapReplacer = (key, value) => {
     if (value instanceof Map || value instanceof Set) {
@@ -137,11 +136,12 @@ const convertMapToJsonObject = (pairsMap) => {
 };
 
 const getSimilarity = (question, answer, questionAnswerSimilarityMap) => {
+  //Name, Class, Student ID will not exist in standard answer.
   if (questionAnswerSimilarityMap.has(question)) {
-    return questionAnswerSimilarityMap.get(question).get(answer) || 0;
-  } else {
-    return 0;
+    if (answer === '') return 0;
+    return questionAnswerSimilarityMap.get(question).get(answer);
   }
+  return 0;
 };
 const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages) => {
   let individualKeyValue = new Map();
@@ -175,6 +175,7 @@ const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages) 
   }
   documentValuePairs.push(individualKeyValue);
   documentConfidencePairs.push(individualConfidenceValue);
+  documentSimilarityPairs.push(individualSimilarityValue);
   documentAnswerGeometryPairs.push(individualAnswerGeometryValue);
 
   return {
@@ -248,9 +249,11 @@ const popularDocumentSheet = (
       documentValueWorkSheet
       .cell(y + 2, x + 1)
       .string(documentValuePairs[y].get(keys[x]) || '');
+
       documentSimilarityWorkSheet
       .cell(y + 2, x + 1)
-      .number(documentSimilarityPairs[y] && documentSimilarityPairs[y].has(keys[x]) ? documentSimilarityPairs[y].get(keys[x]) : 0);
+      .number(documentSimilarityPairs[y].has(keys[x]) ? documentSimilarityPairs[y].get(keys[x]) : 0);
+
       documentConfidenceWorkSheet
       .cell(y + 2, x + 1)
       .number(documentConfidencePairs[y].get(keys[x]) || 0);
