@@ -126,7 +126,8 @@ const getKeyValueRelationship = async (textractPrefix) => {
     contents: c.cells.map(cell => ({
       row: cell.RowIndex,
       col: cell.ColumnIndex,
-      content: blockMap.get(cell.Relationships[0].Ids[0]),
+      content: blockMap.get(cell.Relationships[0].Ids.filter(c => blockMap.get(c).BlockType === 'WORD')[0]), //Cell may contain selection block and word block.
+      selection: blockMap.get(cell.Relationships[0].Ids.filter(c => blockMap.get(c).BlockType === 'SELECTION_ELEMENT')[0]),
     })),
   })) // Word or Selection Element
   .map(c => ({
@@ -143,9 +144,9 @@ const getKeyValueRelationship = async (textractPrefix) => {
     possibleAnswer: c.contents.filter(t => t.row === 1).map(t => ({
       row: t.row,
       col: t.col,
-      text: t.content.Text,
+      text: t.content?.Text,
     })),
-    possibleAnswerText: new Set(c.contents.filter(t => t.row === 1).map(t => t.content.Text.toLowerCase())),
+    possibleAnswerText: new Set(c.contents.filter(t => t.row === 1).map(t => t.content?.Text.toLowerCase())),
   })) // First col is questions and first row is possible answer.
   .filter(c => isSubsetOfChoice(c.possibleAnswerText))
   .map(c => ({
@@ -166,9 +167,9 @@ const getKeyValueRelationship = async (textractPrefix) => {
         keyGeometry: a.keyGeometry,
         keyConfidence: a.keyConfidence,
         page: a.page,
-        val: a.checkboxes.length === 1 && a.checkboxes[0].content.SelectionStatus === 'SELECTED' ? 'X' : '', //single value!
-        valGeometry: a.checkboxes.length === 1 ? a.checkboxes[0].content.Geometry : null,
-        valueConfidence: a.checkboxes.length === 1 ? a.checkboxes[0].content.Confidence : 1,
+        val: a.checkboxes.length === 1 && a.checkboxes[0].selection.SelectionStatus === 'SELECTED' ? 'X' : '', //single value!
+        valGeometry: a.checkboxes.length === 1 ? a.checkboxes[0].selection.Geometry : null,
+        valueConfidence: a.checkboxes.length === 1 ? a.checkboxes[0].selection.Confidence : 1,
       }))
       .forEach(a => acc.push(a));
       return acc;
