@@ -29,6 +29,7 @@ exports.lambdaHandler = (event, context, callback) => {
   console.log('emailSnsTopic= ' + emailSnsTopic);
 
   let emailMessage = 'Welcome! \n\n';
+  emailMessage += process.env.message + '\n\n';
   emailMessage += 'This is an email requiring an approval for a step functions execution. \n\n';
   emailMessage += 'Please check the following information and click "Approve" link if you want to approve. \n\n';
   emailMessage += 'Execution Name -> ' + executionName + '\n\n';
@@ -39,7 +40,7 @@ exports.lambdaHandler = (event, context, callback) => {
   const sns = new AWS.SNS();
   let params = {
     Message: emailMessage,
-    Subject: 'Required approval from AWS Step Functions',
+    Subject: process.env.title ? process.env.title : 'Required approval from AWS Step Functions',
     TopicArn: emailSnsTopic,
   };
 

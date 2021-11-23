@@ -1,6 +1,6 @@
 import path from 'path';
 import * as lambda from '@aws-cdk/aws-lambda';
-import { Code, IFunction, ILayerVersion, Runtime } from '@aws-cdk/aws-lambda';
+import { Code, IFunction, ILayerVersion, Runtime, Tracing } from '@aws-cdk/aws-lambda';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
 import { Construct, Duration } from '@aws-cdk/core';
 
@@ -38,6 +38,7 @@ export class LambdaHelper {
       handler: 'app.lambdaHandler',
       code: Code.fromAsset(path.join(__dirname, '../lambda', assetPath)),
       layers: layers,
+      tracing: Tracing.ACTIVE,
       environment,
     });
   }

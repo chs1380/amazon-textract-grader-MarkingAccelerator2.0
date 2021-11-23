@@ -1,6 +1,6 @@
 import path from 'path';
 import * as lambda from '@aws-cdk/aws-lambda';
-import { ILayerVersion } from '@aws-cdk/aws-lambda';
+import { ILayerVersion, Tracing } from '@aws-cdk/aws-lambda';
 import { Bucket } from '@aws-cdk/aws-s3';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import { StateMachine } from '@aws-cdk/aws-stepfunctions';
@@ -55,6 +55,7 @@ export class AiGraderStateMachineConstruct extends Construct {
       environment: {
         DestinationBucket: this.destinationBucket.bucketName,
       },
+      tracing: Tracing.ACTIVE,
     });
     this.destinationBucket.grantReadWrite(calculateTextSimilarityFunction);
 

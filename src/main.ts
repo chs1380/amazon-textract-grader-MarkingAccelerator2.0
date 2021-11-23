@@ -2,7 +2,7 @@ import { Bucket } from '@aws-cdk/aws-s3';
 import { App, CfnOutput, Construct, RemovalPolicy, Stack, StackProps } from '@aws-cdk/core';
 
 import { AssignmentsTextractStateMachineConstruct } from './construct/assignments-textract-state-machine';
-import { HumanApprovalStateMachineConstruct } from './construct/human-approval-state-machine';
+
 
 export class AmazonTextractGraderStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps = {}) {
@@ -20,10 +20,6 @@ export class AmazonTextractGraderStack extends Stack {
     new AssignmentsTextractStateMachineConstruct(this, 'AssignmentsTextractStateMachineConstruct', {
       pdfSourceBucket,
       pdfDestinationBucket,
-    });
-
-    new HumanApprovalStateMachineConstruct(this, 'HumanApprovalStateMachineConstruct', {
-      url: '',
     });
 
     new CfnOutput(this, 'PdfSourceBucketOutput', {

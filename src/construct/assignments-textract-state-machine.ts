@@ -6,6 +6,7 @@ import { Construct, Duration } from '@aws-cdk/core';
 import { AiGraderStateMachineConstruct } from './ai-grader-state-machine';
 import { AmazonTextractMultiPagesDocumentsStateMachineConstruct } from './amazon-textract-multi-pages-documents-state-machine-construct';
 import { CorrectPdfOrientationStateMachineConstruct } from './correct-pdf-orientation-state-machine-construct';
+import { HumanApprovalStateMachineConstruct } from './human-approval-state-machine';
 import { TransformFormResultStateMachineConstruct } from './transform-form-result-state-machine-construct';
 
 
@@ -40,7 +41,10 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       pdfSourceBucket,
       destinationBucket: pdfDestinationBucket,
     });
-
+    const humanApprovalStateMachineConstruct = new HumanApprovalStateMachineConstruct(this, 'HumanApprovalStateMachineConstruct', {
+      title: 'Please complete Manual mapping task',
+      message: 'Please review the mark result. Accept to finish this marking job and reject to resubmit the mapping and re-generate the results.',
+    });
 
     const scriptsCorrectPdfOrientationStateMachineExecution = this.getStateMachineExecution(
       'ScriptsCorrectPdfOrientationStateMachineExecution', correctPdfOrientationStateMachineConstruct.stateMachine);
@@ -61,6 +65,9 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
 
     const aiGraderStateMachineExecution = this.getStateMachineExecution(
       'AiGraderStateMachineExecution', aiGraderStateMachineConstruct.stateMachine, '$');
+
+    const humanApprovalStateMachineExecution = this.getStateMachineExecution(
+      'humanApprovalStateMachineExecution', humanApprovalStateMachineConstruct.stateMachine, '$.Output');
 
     const start = new sfn.Pass(this, 'StartPass');
     const standardAnswerPass = new sfn.Pass(this, 'StandardAnswerPass', {
@@ -91,7 +98,9 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       .next(answerCorrectPdfOrientationStateMachineExecution)
       .next(answerAmazonTextractMultiPagesDocumentsStateMachineExecution)
       .next(answerTransformFormResultStateMachineExecution));
-    const definition = start.next(parallel).next(aiGraderStateMachineExecution);
+    const definition = start.next(parallel)
+      .next(aiGraderStateMachineExecution)
+      .next(humanApprovalStateMachineExecution);
 
     this.stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definition,

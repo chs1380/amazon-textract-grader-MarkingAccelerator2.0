@@ -11,18 +11,21 @@ import { Construct, Duration } from '@aws-cdk/core';
 import { LambdaHelper } from './lib/lambda-helper';
 
 export interface HumanApprovalStateMachineConstructProps {
-  url: string;
+  title: string;
+  message: string;
 }
 
 export class HumanApprovalStateMachineConstruct extends Construct {
   private lambdaHelper: LambdaHelper;
   public readonly approvalTopic: Topic;
   public readonly stateMachine: StateMachine;
+  private readonly props: HumanApprovalStateMachineConstructProps;
 
   constructor(scope: Construct, id: string, props: HumanApprovalStateMachineConstructProps) {
     super(scope, id);
     this.lambdaHelper = new LambdaHelper(this);
-    console.log(props.url);
+    this.props = props;
+    console.log(props.message);
     this.approvalTopic = new Topic(this, 'Topic', {});
     this.approvalTopic.addSubscription(new EmailSubscription('cywong@vtc.edu.hk'));
 
@@ -65,6 +68,8 @@ export class HumanApprovalStateMachineConstruct extends Construct {
   private getLambdaFunction(assetPath: string, layers: ILayerVersion[], suffix: string = '') {
     const environment = {
       SNSHumanApprovalEmailTopic: this.approvalTopic.topicArn,
+      title: this.props.title,
+      message: this.props.message,
     };
     return this.lambdaHelper.getLambdaFunction(assetPath, layers, environment, suffix);
   }
