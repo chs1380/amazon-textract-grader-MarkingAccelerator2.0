@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "pdf to images",
   "main": "app.js",
-  "repository": "https://github.com/wongcyrus/DocumentsSetTextract/tree/master/documents-set-textract",
-  "author": "SAM CLI",
+  "repository": "https://github.com/wongcyrus/amazon-textract-grader",
+  "author": "Cyrus Wong",
   "license": "MIT",
   "dependencies": {
     "fs-extra": "^10.0.0",

@@ -19,6 +19,7 @@ const project = new AwsCdkTypeScriptApp({
     '@aws-cdk/aws-iam',
     '@aws-cdk/aws-stepfunctions',
     '@aws-cdk/aws-stepfunctions-tasks',
+    '@aws-cdk/aws-apigateway',
   ], /* Which AWS CDK modules (those that start with "@aws-cdk/") this app uses. */
   keywords: [
     'cdk',

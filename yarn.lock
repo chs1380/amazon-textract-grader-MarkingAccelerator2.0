@@ -29,7 +29,7 @@
     "@aws-cdk/core" "1.133.0"
     constructs "^3.3.69"
 
-"@aws-cdk/aws-apigateway@1.133.0":
+"@aws-cdk/aws-apigateway@1.133.0", "@aws-cdk/aws-apigateway@^1.133.0":
   version "1.133.0"
   resolved "https://registry.yarnpkg.com/@aws-cdk/aws-apigateway/-/aws-apigateway-1.133.0.tgz#b3a4fac3f17c1af2fba77874b0e6cc65fbaacef6"
   integrity sha512-7qlTr8bPXhqw4Po0YmhzojY32a0suVX4GqgKOiGngO1GZzFQeUaj3e9MJuAfTEVvRlKEpJkdwYYsIZ49bYrZhw==
