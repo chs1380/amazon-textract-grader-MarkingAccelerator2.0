@@ -47,7 +47,12 @@ exports.lambdaHandler = (event, context, callback) => {
 
   const email = event.Email;
   if (email) {
-    params['MessageAttributes'] = { email };
+    params['MessageAttributes'] = {
+      'email': {
+        'DataType': 'String',
+        'StringValue': email,
+      },
+    };
   }
   sns.publish(params)
   .promise()
