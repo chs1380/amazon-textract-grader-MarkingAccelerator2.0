@@ -37,6 +37,7 @@ exports.lambdaHandler = (event, context, callback) => {
   emailMessage += 'Reject ' + rejectEndpoint + '\n\n';
   emailMessage += 'Thanks for using Step functions!';
 
+
   const sns = new AWS.SNS();
   let params = {
     Message: emailMessage,
@@ -44,6 +45,10 @@ exports.lambdaHandler = (event, context, callback) => {
     TopicArn: emailSnsTopic,
   };
 
+  const email = event.Email;
+  if (email) {
+    params['MessageAttributes'] = { email };
+  }
   sns.publish(params)
   .promise()
   .then(function (data) {

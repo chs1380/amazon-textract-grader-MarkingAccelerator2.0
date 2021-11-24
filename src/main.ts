@@ -1,10 +1,14 @@
 import { Bucket } from '@aws-cdk/aws-s3';
+import { SubscriptionFilter } from '@aws-cdk/aws-sns';
+import { EmailSubscription } from '@aws-cdk/aws-sns-subscriptions';
 import { App, CfnOutput, Construct, RemovalPolicy, Stack, StackProps } from '@aws-cdk/core';
 
 import { AssignmentsTextractStateMachineConstruct } from './construct/assignments-textract-state-machine';
 
 
 export class AmazonTextractGraderStack extends Stack {
+  private assignmentsTextractStateMachineConstruct: AssignmentsTextractStateMachineConstruct;
+
   constructor(scope: Construct, id: string, props: StackProps = {}) {
     super(scope, id, props);
 
@@ -17,10 +21,13 @@ export class AmazonTextractGraderStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
-    new AssignmentsTextractStateMachineConstruct(this, 'AssignmentsTextractStateMachineConstruct', {
+    this.assignmentsTextractStateMachineConstruct = new AssignmentsTextractStateMachineConstruct(this, 'AssignmentsTextractStateMachineConstruct', {
       pdfSourceBucket,
       pdfDestinationBucket,
     });
+
+    const email = 'cywong@vtc.edu.hk';
+    this.addEmailSubscription(email);
 
     new CfnOutput(this, 'PdfSourceBucketOutput', {
       value: pdfSourceBucket.bucketName,
@@ -29,6 +36,20 @@ export class AmazonTextractGraderStack extends Stack {
     new CfnOutput(this, 'PdfDestinationBucketOutput', {
       value: pdfDestinationBucket.bucketName,
     });
+
+    new CfnOutput(this, 'HumanApprovalTopicOutput', {
+      value: this.assignmentsTextractStateMachineConstruct.approvalTopic.topicArn,
+    });
+  }
+
+  private addEmailSubscription(email: string) {
+    this.assignmentsTextractStateMachineConstruct.approvalTopic.addSubscription(new EmailSubscription(email, {
+      filterPolicy: {
+        email: SubscriptionFilter.stringFilter({
+          allowlist: [email],
+        }),
+      },
+    }));
   }
 }
 

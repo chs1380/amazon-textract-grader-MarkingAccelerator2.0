@@ -1,4 +1,5 @@
 import { Bucket } from '@aws-cdk/aws-s3';
+import { Topic } from '@aws-cdk/aws-sns';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import { Choice, IntegrationPattern, StateMachine, TaskInput } from '@aws-cdk/aws-stepfunctions';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
@@ -13,6 +14,7 @@ export interface GenerateMarkResultStateMachineConstructProps {
 
 export class GenerateMarkResultStateMachineConstruct extends Construct {
   public readonly stateMachine: StateMachine;
+  public readonly approvalTopic: Topic;
 
   constructor(scope: Construct, id: string, props: GenerateMarkResultStateMachineConstructProps) {
     super(scope, id);
@@ -28,6 +30,7 @@ export class GenerateMarkResultStateMachineConstruct extends Construct {
       title: 'Please complete Manual mapping task',
       message: 'Please review the mark result. "Approve" to end this marking job and "Reject" after you resubmitted the mapping config and re-generate the results.',
     });
+    this.approvalTopic = humanApprovalStateMachineConstruct.approvalTopic;
 
     const aiGraderStateMachineExecution = this.getStateMachineExecution(
       'AiGraderStateMachineExecution', aiGraderStateMachineConstruct.stateMachine, '$');

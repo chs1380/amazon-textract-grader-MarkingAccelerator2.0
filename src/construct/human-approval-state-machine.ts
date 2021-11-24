@@ -2,7 +2,6 @@ import { LambdaRestApi } from '@aws-cdk/aws-apigateway';
 import { PolicyStatement } from '@aws-cdk/aws-iam';
 import { ILayerVersion } from '@aws-cdk/aws-lambda';
 import { Topic } from '@aws-cdk/aws-sns';
-import { EmailSubscription } from '@aws-cdk/aws-sns-subscriptions';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import { Choice, IntegrationPattern, StateMachine } from '@aws-cdk/aws-stepfunctions';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
@@ -25,9 +24,8 @@ export class HumanApprovalStateMachineConstruct extends Construct {
     super(scope, id);
     this.lambdaHelper = new LambdaHelper(this);
     this.props = props;
-    console.log(props.message);
-    this.approvalTopic = new Topic(this, 'Topic', {});
-    this.approvalTopic.addSubscription(new EmailSubscription('cywong@vtc.edu.hk'));
+
+    this.approvalTopic = new Topic(this, 'HumanApprovalTopic', {});
 
     const stepFunctionApprovalFunction = this.getLambdaFunction('stepfunction-approval', []);
     const lambdaRestApi = new LambdaRestApi(this, 'ApprovalApi', {
@@ -42,6 +40,7 @@ export class HumanApprovalStateMachineConstruct extends Construct {
       payload: TaskInput.fromObject({
         ExecutionContext: sfn.JsonPath.entireContext,
         APIGatewayEndpoint: lambdaRestApi.url,
+        Email: sfn.JsonPath.stringAt('$.Input.scripts.email'),
       }),
       timeout: Duration.hours(3),
       integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
@@ -63,6 +62,8 @@ export class HumanApprovalStateMachineConstruct extends Construct {
       resources: ['*'],
       actions: ['states:SendTaskFailure', 'states:SendTaskSuccess'],
     }));
+
+
   }
 
   private getLambdaFunction(assetPath: string, layers: ILayerVersion[], suffix: string = '') {

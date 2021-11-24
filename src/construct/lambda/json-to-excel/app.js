@@ -6,7 +6,7 @@ const readFile = promisify(fs.readFile);
 const xl = require('excel4node');
 const path = require('path');
 
-exports.lambdaHandler = async(event) => {
+exports.lambdaHandler = async (event) => {
   let key = event.keyValuePairJson; // End with _keyValue.json
   let withAnswerSimilarity = false;
   if (!key) {
@@ -110,10 +110,12 @@ exports.lambdaHandler = async(event) => {
   event.documentConfidencePairsKey = documentConfidencePairsKey;
   event.documentValuePairsKey = documentValuePairsKey;
   event.excelKey = excelKey;
+  const regex = /\S+[a-z0-9]@[a-z0-9.]+/img;
+  event.email = excelKey.match(regex)[0];
   return event;
 };
 
-const saveMapToS3 = async(key, pairsMap) => {
+const saveMapToS3 = async (key, pairsMap) => {
   await s3.putObject({
     Bucket: process.env['DestinationBucket'],
     Key: key,
@@ -139,7 +141,7 @@ const getSimilarity = (question, answer, questionAnswerSimilarityMap) => {
   if (questionAnswerSimilarityMap.has(question)) {
     if (answer === '') return 0;
     const choices = new Set(['a', 'b', 'c', 'd', 'e', 'yes', 'no']);
-    const last = question.split("-").pop();
+    const last = question.split('-').pop();
     if (last && choices.has(last.toLowerCase())) {
       return (+questionAnswerSimilarityMap.get(question).get(answer) > 0.4) ? 1 : 0;
     }
@@ -276,15 +278,14 @@ const writeExcel = (workbook, filePath) => {
     workbook.write(filePath, (err, stats) => {
       if (err) {
         return reject(err);
-      }
-      else {
+      } else {
         return resolve(stats); // Prints out an instance of a node.js fs.Stats object
       }
     });
   });
 };
 
-const s3download = async(bucketName, keyName, localDest) => {
+const s3download = async (bucketName, keyName, localDest) => {
   if (typeof localDest == 'undefined') {
     localDest = keyName;
   }
@@ -296,7 +297,7 @@ const s3download = async(bucketName, keyName, localDest) => {
   fs.writeFileSync(localDest, data.Body);
 };
 
-const getS3Json = async(bucketName, key) => {
+const getS3Json = async (bucketName, key) => {
   const filePath = '/tmp/' + key;
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   await s3download(bucketName, key, filePath);

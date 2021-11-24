@@ -1,4 +1,5 @@
 import { Bucket } from '@aws-cdk/aws-s3';
+import { Topic } from '@aws-cdk/aws-sns';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import { IntegrationPattern, StateMachine, TaskInput } from '@aws-cdk/aws-stepfunctions';
 import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
@@ -16,6 +17,7 @@ export interface AssignmentsTextractStateMachineConstructProps {
 
 export class AssignmentsTextractStateMachineConstruct extends Construct {
   public readonly stateMachine: StateMachine;
+  public readonly approvalTopic: Topic;
 
   constructor(scope: Construct, id: string, props: AssignmentsTextractStateMachineConstructProps) {
     super(scope, id);
@@ -40,6 +42,7 @@ export class AssignmentsTextractStateMachineConstruct extends Construct {
       pdfSourceBucket,
       pdfDestinationBucket,
     });
+    this.approvalTopic = generateMarkResultStateMachineConstruct.approvalTopic;
 
     const scriptsCorrectPdfOrientationStateMachineExecution = this.getStateMachineExecution(
       'ScriptsCorrectPdfOrientationStateMachineExecution', correctPdfOrientationStateMachineConstruct.stateMachine);
