@@ -8,7 +8,7 @@ import { WaitTime } from '@aws-cdk/aws-stepfunctions/lib/states/wait';
 import { Construct, Duration } from '@aws-cdk/core';
 
 
-export interface AmazonTextractMultiPagesDocumentsConstructStateMachineConstructProps {
+export interface AmazonTextractMultiPagesDocumentsStateMachineConstructProps {
   pdfSourceBucket: Bucket;
   destinationBucket: Bucket;
 }
@@ -18,7 +18,7 @@ export class AmazonTextractMultiPagesDocumentsStateMachineConstruct extends Cons
   public readonly destinationBucket: Bucket;
   public readonly stateMachine: StateMachine;
 
-  constructor(scope: Construct, id: string, props: AmazonTextractMultiPagesDocumentsConstructStateMachineConstructProps) {
+  constructor(scope: Construct, id: string, props: AmazonTextractMultiPagesDocumentsStateMachineConstructProps) {
     super(scope, id);
     this.pdfSourceBucket = props.pdfSourceBucket;
     this.destinationBucket = props.destinationBucket;
