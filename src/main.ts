@@ -26,7 +26,7 @@ export class AmazonTextractGraderStack extends Stack {
       pdfDestinationBucket,
     });
 
-    const email = 'cywong@vtc.edu.hk';
+    const email = this.node.tryGetContext('email');
     this.addEmailSubscription(email);
 
     new CfnOutput(this, 'PdfSourceBucketOutput', {

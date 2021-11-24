@@ -33,6 +33,9 @@ pj watch
 ./install_all_packages.sh
 ### Upgrade all node packages
 ./upgrade_all_packages.sh
+### Set your email in environment variable and run projen to update cdk.json.
+export email=cywong@vtc.edu.hk
+pj
 ### Deployment
 pj deploy
 ### Deployment hotswap

@@ -12,6 +12,7 @@ import { LambdaHelper } from './lib/lambda-helper';
 export interface HumanApprovalStateMachineConstructProps {
   title: string;
   message: string;
+  emailInputPath?: string;
 }
 
 export class HumanApprovalStateMachineConstruct extends Construct {
@@ -40,10 +41,11 @@ export class HumanApprovalStateMachineConstruct extends Construct {
       payload: TaskInput.fromObject({
         ExecutionContext: sfn.JsonPath.entireContext,
         APIGatewayEndpoint: lambdaRestApi.url,
-        Email: sfn.JsonPath.stringAt('$.Input.scripts.email'),
+        Email: sfn.JsonPath.stringAt(props.emailInputPath ?? '$.email'),
       }),
       timeout: Duration.hours(3),
       integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
+
     });
 
     const successState = new sfn.Pass(this, 'SuccessState');

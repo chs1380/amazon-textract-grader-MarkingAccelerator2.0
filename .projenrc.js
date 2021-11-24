@@ -8,6 +8,7 @@ const project = new AwsCdkTypeScriptApp({
   name: 'amazon-textract-grader',
   context: {
     namePrefix: 'grader',
+    email: process.env.email ?? 'dummy@email.com',
   },
   cdkDependencies: [
     '@aws-cdk/aws-s3',
