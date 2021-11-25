@@ -52,6 +52,9 @@ exports.lambdaHandler = async (event) => {
       return acc;
     }, new Map());
     console.log(oneToNMapping);
+  }else{
+    nToOneMapping = new Map();
+    oneToNMapping = new Map();
   }
 
   let questionAnswerSimilarityMap = new Map();
