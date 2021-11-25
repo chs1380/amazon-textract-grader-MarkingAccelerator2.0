@@ -25,10 +25,34 @@ exports.lambdaHandler = async (event) => {
   const pageConfidenceWorkSheet = wb.addWorksheet('PageConfidence');
   const pageSimilarityWorkSheet = wb.addWorksheet('PageAnswerSimilarity');
 
-  const keys = Array.from(new Set(keyValuePairJson.map((c) => c.key))).sort();
+  let keys = Array.from(new Set(keyValuePairJson.map((c) => c.key))).sort();
   const pages = Array.from(new Set(keyValuePairJson.map((c) => c.page))).sort(
     (a, b) => a - b,
   );
+
+  let nToOneMapping = event.mapping;
+  let oneToNMapping;
+  if (nToOneMapping) {
+    nToOneMapping = new Map(Object.entries(nToOneMapping));
+    console.log(nToOneMapping);
+    keys = keys.map(k => nToOneMapping.has(k) ? nToOneMapping.get(k) : k);
+    keys = Array.from(new Set(keys)).sort();
+    console.log(keys);
+    oneToNMapping = Array.from(nToOneMapping)
+    .map(([key, value]) => ({
+      key,
+      value,
+    }))
+    .reduce((acc, curr) => {
+
+      if (!acc.has(curr.value)) {
+        acc.set(curr.value, []);
+      }
+      acc.get(curr.value).push(curr.key);
+      return acc;
+    }, new Map());
+    console.log(oneToNMapping);
+  }
 
   let questionAnswerSimilarityMap = new Map();
   if (withAnswerSimilarity) {
@@ -60,6 +84,7 @@ exports.lambdaHandler = async (event) => {
     keyValuePairJson,
     questionAnswerSimilarityMap,
     bgStyle,
+    oneToNMapping,
   );
   const {
     documentConfidencePairs,
@@ -75,9 +100,9 @@ exports.lambdaHandler = async (event) => {
     keyValuePairJson,
     questionAnswerSimilarityMap,
     bgStyle,
+    oneToNMapping,
+    nToOneMapping,
   );
-
-
   const documentConfidencePairsKey = key.replace('_keyValue.json', '_DocumentConfidencePairs.json');
   const documentValuePairsKey = key.replace('_keyValue.json', '_DocumentValuePairs.json');
   const documentAnswerGeometryPairsKey = key.replace('_keyValue.json', '_DocumentAnswerGeometryPairsKey.json');
@@ -158,7 +183,7 @@ const getSimilarity = (question, answer, questionAnswerSimilarityMap) => {
   }
   return 0;
 };
-const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages) => {
+const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages, nToOneMapping) => {
   let individualKeyValue = new Map();
   let individualConfidenceValue = new Map();
   let individualSimilarityValue = new Map();
@@ -168,11 +193,10 @@ const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages) 
   let documentSimilarityPairs = [];
   let documentAnswerGeometryPairs = [];
 
-
   for (let y = 0; y < pages.length; y++) {
     let kvs = keyValuePairJson.filter((c) => c.page === pages[y]);
     //Assume document page ordering is correct, then found any repeated key, then consider it is a new document.
-    if (kvs.map((c) => c.key).some((key) => individualKeyValue.has(key))) {
+    if (kvs.map(c => c.key).some((key) => individualKeyValue.has(key))) {
       documentValuePairs.push(individualKeyValue);
       documentConfidencePairs.push(individualConfidenceValue);
       documentSimilarityPairs.push(individualSimilarityValue);
@@ -183,10 +207,16 @@ const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages) 
       individualAnswerGeometryValue = new Map();
     }
 
-    kvs.map((c) => individualKeyValue.set(c.key, c.val));
-    kvs.map((c) => individualConfidenceValue.set(c.key, c.valueConfidence));
-    kvs.map((c) => individualSimilarityValue.set(c.key, getSimilarity(c.key, c.val, questionAnswerSimilarityMap)));
-    kvs.map((c) => individualAnswerGeometryValue.set(c.key, c.valGeometry));
+    kvs.map(c => individualKeyValue.set(c.key, c.val));
+    kvs.map(c => individualConfidenceValue.set(c.key, c.valueConfidence));
+    kvs.map(c => {
+      let key = c.key; //script key
+      if (nToOneMapping.has(c.key)) {
+        key = nToOneMapping.get(c.key); //get back the answer key.
+      }
+      return individualSimilarityValue.set(c.key, getSimilarity(key, c.val, questionAnswerSimilarityMap));
+    });
+    kvs.map(c => individualAnswerGeometryValue.set(c.key, c.valGeometry));
   }
   documentValuePairs.push(individualKeyValue);
   documentConfidencePairs.push(individualConfidenceValue);
@@ -210,6 +240,7 @@ const popularPageSheet = (
   keyValuePairJson,
   questionAnswerSimilarityMap,
   bgStyle,
+  oneToNMapping,
 ) => {
   for (let x = 0; x < keys.length; x++) {
     const question = keys[x];
@@ -226,17 +257,27 @@ const popularPageSheet = (
 
   for (let x = 0; x < keys.length; x++) {
     for (let y = 0; y < pages.length; y++) {
-      let data = keyValuePairJson.filter(
-        (c) => c.page === pages[y] && c.key === keys[x],
-      );
-      if (data.length === 1) {
-        pageValueWorkSheet.cell(y + 2, x + 1).string(data[0].val);
-        pageConfidenceWorkSheet
-        .cell(y + 2, x + 1)
-        .number(data[0].valueConfidence);
-        pageSimilarityWorkSheet
-        .cell(y + 2, x + 1)
-        .number(getSimilarity(data[0].key, data[0].val, questionAnswerSimilarityMap));
+      let value, valueConfidence, similarity, data;
+      if (oneToNMapping.has(keys[x])) {
+        const duplicatedKeys = oneToNMapping.get(keys[x]);
+        // no need megre as only key mapping must only has one value!
+        data = duplicatedKeys.map(k =>
+          keyValuePairJson.filter(
+            c => c.page === pages[y] && c.key === k,
+          )[0])
+        .filter(c => c !== undefined)[0];
+      } else {
+        data = keyValuePairJson.filter(
+          c => c.page === pages[y] && c.key === keys[x],
+        )[0];
+      }
+      if (data) {
+        value = data.val;
+        valueConfidence = data.valueConfidence;
+        similarity = getSimilarity(keys[x], data.val, questionAnswerSimilarityMap);
+        pageValueWorkSheet.cell(y + 2, x + 1).string(value);
+        pageConfidenceWorkSheet.cell(y + 2, x + 1).number(valueConfidence);
+        pageSimilarityWorkSheet.cell(y + 2, x + 1).number(similarity);
       }
     }
   }
@@ -251,6 +292,8 @@ const popularDocumentSheet = (
   keyValuePairJson,
   questionAnswerSimilarityMap,
   bgStyle,
+  oneToNMapping,
+  nToOneMapping,
 ) => {
   let {
     documentValuePairs,
@@ -261,6 +304,7 @@ const popularDocumentSheet = (
     keyValuePairJson,
     questionAnswerSimilarityMap,
     pages,
+    nToOneMapping,
   );
   for (let x = 0; x < keys.length; x++) {
     const question = keys[x];
@@ -277,17 +321,20 @@ const popularDocumentSheet = (
 
   for (let x = 0; x < keys.length; x++) {
     for (let y = 0; y < documentValuePairs.length; y++) {
-      documentValueWorkSheet
-      .cell(y + 2, x + 1)
-      .string(documentValuePairs[y].get(keys[x]) || '');
-
-      documentSimilarityWorkSheet
-      .cell(y + 2, x + 1)
-      .number(documentSimilarityPairs[y].has(keys[x]) ? documentSimilarityPairs[y].get(keys[x]) : 0);
-
-      documentConfidenceWorkSheet
-      .cell(y + 2, x + 1)
-      .number(documentConfidencePairs[y].get(keys[x]) || 0);
+      let value, valueConfidence, similarity;
+      if (oneToNMapping.has(keys[x])) {
+        const duplicatedKeys = oneToNMapping.get(keys[x]);
+        value = duplicatedKeys.map(k => documentValuePairs[y].get(k) || '').join('');
+        similarity = Math.max(...duplicatedKeys.map(k => documentSimilarityPairs[y].has(k) ? documentSimilarityPairs[y].get(k) : 0));
+        valueConfidence = Math.max(...duplicatedKeys.map(k => documentConfidencePairs[y].get(k) || 0));
+      } else {
+        value = documentValuePairs[y].get(keys[x]) || '';
+        similarity = documentSimilarityPairs[y].has(keys[x]) ? documentSimilarityPairs[y].get(keys[x]) : 0;
+        valueConfidence = documentConfidencePairs[y].get(keys[x]) || 0;
+      }
+      documentValueWorkSheet.cell(y + 2, x + 1).string(value);
+      documentSimilarityWorkSheet.cell(y + 2, x + 1).number(similarity);
+      documentConfidenceWorkSheet.cell(y + 2, x + 1).number(valueConfidence);
     }
   }
   return {
@@ -309,6 +356,7 @@ const writeExcel = (workbook, filePath) => {
     });
   });
 };
+
 
 const s3download = async (bucketName, keyName, localDest) => {
   if (typeof localDest == 'undefined') {

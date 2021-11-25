@@ -41,8 +41,9 @@ export class AiGraderStateMachineConstruct extends Construct {
       resultPath: '$.result',
     });
 
+    const xlsxLayer = this.lambdaHelper.getLayerVersion('xlsx/');
     const joinAnswerFunction = this.getLambdaFunction('join-answer',
-      []);
+      [xlsxLayer]);
     this.destinationBucket.grantReadWrite(joinAnswerFunction);
     const joinAnswerTask = this.lambdaHelper.getLambdaInvokeTask(joinAnswerFunction);
 
