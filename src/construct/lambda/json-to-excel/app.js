@@ -43,7 +43,14 @@ exports.lambdaHandler = async (event) => {
       return acc;
     }, new Map());
   }
-
+  const bgStyle = wb.createStyle({
+    fill: {
+      type: 'pattern',
+      patternType: 'solid',
+      bgColor: '#ffff00',
+      fgColor: '#ffff00',
+    },
+  });
   popularPageSheet(
     pageValueWorkSheet,
     pageConfidenceWorkSheet,
@@ -52,6 +59,7 @@ exports.lambdaHandler = async (event) => {
     pages,
     keyValuePairJson,
     questionAnswerSimilarityMap,
+    bgStyle,
   );
   const {
     documentConfidencePairs,
@@ -66,6 +74,7 @@ exports.lambdaHandler = async (event) => {
     pages,
     keyValuePairJson,
     questionAnswerSimilarityMap,
+    bgStyle,
   );
 
 
@@ -200,11 +209,19 @@ const popularPageSheet = (
   pages,
   keyValuePairJson,
   questionAnswerSimilarityMap,
+  bgStyle,
 ) => {
   for (let x = 0; x < keys.length; x++) {
-    pageValueWorkSheet.cell(1, x + 1).string(keys[x]);
-    pageConfidenceWorkSheet.cell(1, x + 1).string(keys[x]);
-    pageSimilarityWorkSheet.cell(1, x + 1).string(keys[x]);
+    const question = keys[x];
+    const isNotMatch = !questionAnswerSimilarityMap.has(question);
+    if (isNotMatch) {
+      pageValueWorkSheet.cell(1, x + 1).style(bgStyle);
+      pageConfidenceWorkSheet.cell(1, x + 1).style(bgStyle);
+      pageSimilarityWorkSheet.cell(1, x + 1).style(bgStyle);
+    }
+    pageValueWorkSheet.cell(1, x + 1).string(question);
+    pageConfidenceWorkSheet.cell(1, x + 1).string(question);
+    pageSimilarityWorkSheet.cell(1, x + 1).string(question);
   }
 
   for (let x = 0; x < keys.length; x++) {
@@ -233,6 +250,7 @@ const popularDocumentSheet = (
   pages,
   keyValuePairJson,
   questionAnswerSimilarityMap,
+  bgStyle,
 ) => {
   let {
     documentValuePairs,
@@ -245,9 +263,16 @@ const popularDocumentSheet = (
     pages,
   );
   for (let x = 0; x < keys.length; x++) {
-    documentValueWorkSheet.cell(1, x + 1).string(keys[x]);
-    documentSimilarityWorkSheet.cell(1, x + 1).string(keys[x]);
-    documentConfidenceWorkSheet.cell(1, x + 1).string(keys[x]);
+    const question = keys[x];
+    const isNotMatch = !questionAnswerSimilarityMap.has(question);
+    if (isNotMatch) {
+      documentValueWorkSheet.cell(1, x + 1).style(bgStyle);
+      documentSimilarityWorkSheet.cell(1, x + 1).style(bgStyle);
+      documentConfidenceWorkSheet.cell(1, x + 1).style(bgStyle);
+    }
+    documentValueWorkSheet.cell(1, x + 1).string(question);
+    documentSimilarityWorkSheet.cell(1, x + 1).string(question);
+    documentConfidenceWorkSheet.cell(1, x + 1).string(question);
   }
 
   for (let x = 0; x < keys.length; x++) {
