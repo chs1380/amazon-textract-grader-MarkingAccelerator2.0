@@ -167,9 +167,21 @@ const getKeyValueRelationship = async (textractPrefix) => {
         keyGeometry: a.keyGeometry,
         keyConfidence: a.keyConfidence,
         page: a.page,
-        val: a.checkboxes.length === 1 && a.checkboxes[0].selection.SelectionStatus === 'SELECTED' ? 'X' : '', //single value!
-        valGeometry: a.checkboxes.length === 1 ? a.checkboxes[0].selection.Geometry : null,
-        valueConfidence: a.checkboxes.length === 1 ? a.checkboxes[0].selection.Confidence : 1,
+        val: (() => { //Selection  box or Text content such as V for tick.
+          if (a.checkboxes.length === 1) {
+            const boxContent = a.checkboxes[0];
+            if (boxContent.selection) {
+              return boxContent.selection.SelectionStatus === 'SELECTED' ? 'X' : '';
+            } else if (boxContent.content) {
+              return boxContent.content.Text.length > 0 ? 'X' : '';
+            } else {
+              return '';
+            }
+          }
+          return '';
+        })(),
+        valGeometry: a.checkboxes.length === 1 ? (a.checkboxes[0].selection ? a.checkboxes[0].selection.Geometry : (a.checkboxes[0].content ? a.checkboxes[0].content.Geometry : null)) : null,
+        valueConfidence: a.checkboxes.length === 1 ? (a.checkboxes[0].selection ? a.checkboxes[0].selection.Confidence : (a.checkboxes[0].content ? a.checkboxes[0].content.Confidence : 1)) : 1,
       }))
       .forEach(a => acc.push(a));
       return acc;

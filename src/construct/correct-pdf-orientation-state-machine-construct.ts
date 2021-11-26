@@ -3,7 +3,7 @@ import { Bucket } from '@aws-cdk/aws-s3';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import { Condition, Pass, StateMachine, Wait } from '@aws-cdk/aws-stepfunctions';
 import { WaitTime } from '@aws-cdk/aws-stepfunctions/lib/states/wait';
-import { Construct, Duration, RemovalPolicy } from '@aws-cdk/core';
+import { Construct, Duration } from '@aws-cdk/core';
 import { LambdaHelper } from './lib/lambda-helper';
 
 
@@ -14,7 +14,6 @@ export interface CorrectPdfOrientationStateMachineConstructProps {
 
 export class CorrectPdfOrientationStateMachineConstruct extends Construct {
   public readonly pdfSourceBucket: Bucket;
-  private imageBucket: Bucket;
   public readonly pdfDestinationBucket: Bucket;
   public readonly stateMachine: StateMachine;
   private readonly lambdaHelper: LambdaHelper;
@@ -26,14 +25,6 @@ export class CorrectPdfOrientationStateMachineConstruct extends Construct {
     this.pdfSourceBucket = props.pdfSourceBucket;
     this.pdfDestinationBucket = props.pdfDestinationBucket;
 
-    this.imageBucket = new Bucket(this, 'ImageBucket', {
-      autoDeleteObjects: true,
-      lifecycleRules: [{
-        expiration: Duration.days(7),
-      }],
-      removalPolicy: RemovalPolicy.DESTROY,
-    });
-
     //Source https://github.com/shelfio/ghostscript-lambda-layer
     const ghostscriptLayer = this.lambdaHelper.getLayerVersion('ghostscript/ghostscript.zip');
     const imageMagickLayer = this.lambdaHelper.getLayerVersion('image-magick/layer.zip');
@@ -42,21 +33,20 @@ export class CorrectPdfOrientationStateMachineConstruct extends Construct {
 
     const pdfToImagesFunction = this.getLambdaFunction('pdf-to-Images',
       [ghostscriptLayer, imageMagickLayer]);
-    this.imageBucket.grantWrite(pdfToImagesFunction);
+    this.pdfDestinationBucket.grantWrite(pdfToImagesFunction);
     this.pdfSourceBucket.grantRead(pdfToImagesFunction);
 
     const analyzeDocumentImagesFunction = this.getLambdaFunction('analyze-document-images', []);
     analyzeDocumentImagesFunction.role?.addManagedPolicy({ managedPolicyArn: 'arn:aws:iam::aws:policy/AmazonRekognitionReadOnlyAccess' });
-    this.imageBucket.grantReadWrite(analyzeDocumentImagesFunction);
+    this.pdfDestinationBucket.grantReadWrite(analyzeDocumentImagesFunction);
 
     const correctImageOrientationFunction = this.getLambdaFunction('correct-image-orientation',
       [sharpLayer]);
-    this.imageBucket.grantReadWrite(correctImageOrientationFunction);
+    this.pdfDestinationBucket.grantReadWrite(correctImageOrientationFunction);
 
     const imagesToPdfFunction = this.getLambdaFunction('images-to-pdf',
       [pdfkitLayer]);
-    this.imageBucket.grantRead(imagesToPdfFunction);
-    this.pdfDestinationBucket.grantWrite(imagesToPdfFunction);
+    this.pdfDestinationBucket.grantReadWrite(imagesToPdfFunction);
 
     const pdfToImagesTask = this.lambdaHelper.getLambdaInvokeTask(pdfToImagesFunction);
     const analyzeDocumentImagesTask = this.lambdaHelper.getLambdaInvokeTask(analyzeDocumentImagesFunction);
@@ -81,7 +71,7 @@ export class CorrectPdfOrientationStateMachineConstruct extends Construct {
 
   private getLambdaFunction(assetPath: string, layers: ILayerVersion[]) {
     const environment = {
-      ImagesBucket: this.imageBucket.bucketName,
+      ImagesBucket: this.pdfDestinationBucket.bucketName,
       PdfSourceBucket: this.pdfSourceBucket.bucketName,
       PdfDestinationBucket: this.pdfDestinationBucket.bucketName,
     };
