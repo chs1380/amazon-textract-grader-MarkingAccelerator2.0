@@ -17,10 +17,22 @@ exports.lambdaHandler = async (event) => {
   const rawData = fs.readFileSync(filePath);
   const keyValuePairJson = JSON.parse(rawData);
 
+  const answerOverrideExcelKey = event.standardAnswer.key.replace('.pdf', '_override.xlsx');
+  const isAnswerOverrideExist = await isS3ObjectExist(process.env['DestinationBucket'], answerOverrideExcelKey);
+  let answerOverride = new Map();
+  if (isAnswerOverrideExist) {
+    const excelFilePath = '/tmp/' + answerOverrideExcelKey;
+    await s3download(process.env['DestinationBucket'], answerOverrideExcelKey, excelFilePath);
+    const workbook = XLSX.readFile(excelFilePath);
+    const sheet_name_list = workbook.SheetNames;
+    answerOverride = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
+    answerOverride = new Map(Object.entries(answerOverride[0]));
+    console.log(answerOverride);
+  }
 
   let standardAnswerMap = event.result.QuestionAndAnswerList.map(a => ({
     key: a.key,
-    val: a.val,
+    val: answerOverride.has(a.key) ? answerOverride.get(a.key) : a.val,
   }))
   .reduce((acc, curr) => {
     if (!acc.has(curr.key)) {
@@ -28,7 +40,6 @@ exports.lambdaHandler = async (event) => {
     }
     return acc;
   }, new Map());
-
 
   const mappingExcelKey = event.scripts.key.replace('.pdf', '_mapping.xlsx');
   const isMappingExist = await isS3ObjectExist(process.env['DestinationBucket'], mappingExcelKey);
@@ -93,10 +104,14 @@ exports.lambdaHandler = async (event) => {
 
   const matchResults = await Promise.all(Array.from(studentQuestionAndAnswerSet.match).map(async ([key, value]) => {
     const s3Key = event.scripts.keyValuePairJson.replace('.json', '') + '/match/' + encodeURIComponent(key) + '.json';
+    const standardAnswer = standardAnswerMap.get(key);
+    value.delete(standardAnswer);
+    const studentAnswers = Array.from(value);
+    studentAnswers.unshift(standardAnswer); // First element must be standard answer!
     await s3.putObject({
       Bucket: process.env['DestinationBucket'],
       Key: s3Key,
-      Body: JSON.stringify(Array.from(value)),
+      Body: JSON.stringify(studentAnswers),
       ContentType: 'application/json',
     }).promise();
     return ({
