@@ -13,6 +13,8 @@ export interface HumanApprovalStateMachineConstructProps {
   title: string;
   message: string;
   emailInputPath?: string;
+  subjectInputPath?: string;
+  messageInputPath?: string;
 }
 
 export class HumanApprovalStateMachineConstruct extends Construct {
@@ -42,6 +44,8 @@ export class HumanApprovalStateMachineConstruct extends Construct {
         ExecutionContext: sfn.JsonPath.entireContext,
         APIGatewayEndpoint: lambdaRestApi.url,
         Email: sfn.JsonPath.stringAt(props.emailInputPath ?? '$.email'),
+        Subject: sfn.JsonPath.stringAt(props.subjectInputPath ?? '$.subject'),
+        Message: sfn.JsonPath.stringAt(props.messageInputPath ?? '$.message'),
       }),
       timeout: Duration.hours(3),
       integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,

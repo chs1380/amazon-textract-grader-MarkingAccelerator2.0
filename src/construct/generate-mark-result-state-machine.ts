@@ -27,9 +27,11 @@ export class GenerateMarkResultStateMachineConstruct extends Construct {
       destinationBucket: pdfDestinationBucket,
     });
     const humanApprovalStateMachineConstruct = new HumanApprovalStateMachineConstruct(this, 'HumanApprovalStateMachineConstruct', {
-      title: 'Manual mapping task for your assignment',
+      title: 'Manual mapping task for your assignment: ',
       message: 'Please review the mark result. "Approve" to end this marking job. \n if it is not acceptable, upload mapping to S3, click "Reject" and re-generate the results.',
       emailInputPath: '$.scripts.email',
+      subjectInputPath: '$.scripts.subject',
+      messageInputPath: '$.scripts.message',
     });
     this.approvalTopic = humanApprovalStateMachineConstruct.approvalTopic;
 

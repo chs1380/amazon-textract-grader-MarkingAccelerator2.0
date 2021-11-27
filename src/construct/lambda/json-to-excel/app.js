@@ -153,6 +153,8 @@ exports.lambdaHandler = async (event) => {
   event.excelKey = excelKey;
   const regex = /\S+[a-z0-9]@[a-z0-9.]+/img;
   event.email = excelKey.match(regex)[0];
+  event.subject = event.key.replace(event.email + '/', '');
+  event.message = '';
   return event;
 };
 

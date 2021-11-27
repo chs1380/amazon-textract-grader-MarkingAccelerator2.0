@@ -28,8 +28,10 @@ exports.lambdaHandler = (event, context, callback) => {
   const emailSnsTopic = process.env.SNSHumanApprovalEmailTopic;
   console.log('emailSnsTopic= ' + emailSnsTopic);
 
+  const message = event.Message ?? '';
+
   let emailMessage = 'Welcome! \n\n';
-  emailMessage += process.env.message + '\n\n';
+  emailMessage += process.env.message + message + '\n\n';
   emailMessage += 'This is an email requiring an approval for a step functions execution. \n\n';
   emailMessage += 'Please check the following information and click "Approve" link if you want to approve. \n\n';
   emailMessage += 'Execution Name -> ' + executionName + '\n\n';
@@ -37,11 +39,12 @@ exports.lambdaHandler = (event, context, callback) => {
   emailMessage += 'Reject ' + rejectEndpoint + '\n\n';
   emailMessage += 'Thanks for using Step functions!';
 
+  const subject = event.Subject ?? '';
 
   const sns = new AWS.SNS();
   let params = {
     Message: emailMessage,
-    Subject: process.env.title ? process.env.title : 'Required approval from AWS Step Functions',
+    Subject: (process.env.title ? process.env.title : 'Required approval from AWS Step Functions: ') + subject,
     TopicArn: emailSnsTopic,
   };
 
