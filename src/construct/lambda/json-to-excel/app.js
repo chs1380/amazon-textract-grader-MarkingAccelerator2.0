@@ -20,10 +20,12 @@ exports.lambdaHandler = async (event) => {
   const documentValueWorkSheet = wb.addWorksheet('DocumentValue');
   const documentConfidenceWorkSheet = wb.addWorksheet('DocumentConfidence');
   const documentSimilarityWorkSheet = wb.addWorksheet('DocumentAnswerSimilarity');
+  const documentGeometryWorkSheet = wb.addWorksheet('DocumentAnswerGeometry');
 
   const pageValueWorkSheet = wb.addWorksheet('PageValue');
   const pageConfidenceWorkSheet = wb.addWorksheet('PageConfidence');
   const pageSimilarityWorkSheet = wb.addWorksheet('PageAnswerSimilarity');
+  const pageGeometryWorkSheet = wb.addWorksheet('PageAnswerGeometry');
 
   let keys = Array.from(new Set(keyValuePairJson.map((c) => c.key))).sort();
   const pages = Array.from(new Set(keyValuePairJson.map((c) => c.page))).sort(
@@ -52,7 +54,7 @@ exports.lambdaHandler = async (event) => {
       return acc;
     }, new Map());
     console.log(oneToNMapping);
-  }else{
+  } else {
     nToOneMapping = new Map();
     oneToNMapping = new Map();
   }
@@ -82,6 +84,7 @@ exports.lambdaHandler = async (event) => {
     pageValueWorkSheet,
     pageConfidenceWorkSheet,
     pageSimilarityWorkSheet,
+    pageGeometryWorkSheet,
     keys,
     pages,
     keyValuePairJson,
@@ -98,6 +101,7 @@ exports.lambdaHandler = async (event) => {
     documentValueWorkSheet,
     documentConfidenceWorkSheet,
     documentSimilarityWorkSheet,
+    documentGeometryWorkSheet,
     keys,
     pages,
     keyValuePairJson,
@@ -219,7 +223,11 @@ const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages, 
       }
       return individualSimilarityValue.set(c.key, getSimilarity(key, c.val, questionAnswerSimilarityMap));
     });
-    kvs.map(c => individualAnswerGeometryValue.set(c.key, c.valGeometry));
+    kvs.map(c => {
+      let valGeometry = c.valGeometry;
+      if (valGeometry) valGeometry['page'] = y;
+      individualAnswerGeometryValue.set(c.key, valGeometry);
+    });
   }
   documentValuePairs.push(individualKeyValue);
   documentConfidencePairs.push(individualConfidenceValue);
@@ -238,6 +246,7 @@ const popularPageSheet = (
   pageValueWorkSheet,
   pageConfidenceWorkSheet,
   pageSimilarityWorkSheet,
+  pageGeometryWorkSheet,
   keys,
   pages,
   keyValuePairJson,
@@ -252,10 +261,12 @@ const popularPageSheet = (
       pageValueWorkSheet.cell(1, x + 1).style(bgStyle);
       pageConfidenceWorkSheet.cell(1, x + 1).style(bgStyle);
       pageSimilarityWorkSheet.cell(1, x + 1).style(bgStyle);
+      pageGeometryWorkSheet.cell(1, x + 1).style(bgStyle);
     }
     pageValueWorkSheet.cell(1, x + 1).string(question);
     pageConfidenceWorkSheet.cell(1, x + 1).string(question);
     pageSimilarityWorkSheet.cell(1, x + 1).string(question);
+    pageGeometryWorkSheet.cell(1, x + 1).string(question);
   }
 
   for (let x = 0; x < keys.length; x++) {
@@ -281,6 +292,7 @@ const popularPageSheet = (
         pageValueWorkSheet.cell(y + 2, x + 1).string(value);
         pageConfidenceWorkSheet.cell(y + 2, x + 1).number(valueConfidence);
         pageSimilarityWorkSheet.cell(y + 2, x + 1).number(similarity);
+        pageGeometryWorkSheet.cell(y + 2, x + 1).string(JSON.stringify(data.valGeometry));
       }
     }
   }
@@ -290,6 +302,7 @@ const popularDocumentSheet = (
   documentValueWorkSheet,
   documentConfidenceWorkSheet,
   documentSimilarityWorkSheet,
+  documentGeometryWorkSheet,
   keys,
   pages,
   keyValuePairJson,
@@ -316,28 +329,33 @@ const popularDocumentSheet = (
       documentValueWorkSheet.cell(1, x + 1).style(bgStyle);
       documentSimilarityWorkSheet.cell(1, x + 1).style(bgStyle);
       documentConfidenceWorkSheet.cell(1, x + 1).style(bgStyle);
+      documentGeometryWorkSheet.cell(1, x + 1).style(bgStyle);
     }
     documentValueWorkSheet.cell(1, x + 1).string(question);
     documentSimilarityWorkSheet.cell(1, x + 1).string(question);
     documentConfidenceWorkSheet.cell(1, x + 1).string(question);
+    documentGeometryWorkSheet.cell(1, x + 1).string(question);
   }
 
   for (let x = 0; x < keys.length; x++) {
     for (let y = 0; y < documentValuePairs.length; y++) {
-      let value, valueConfidence, similarity;
+      let value, valueConfidence, similarity, geometry;
       if (oneToNMapping.has(keys[x])) {
         const duplicatedKeys = oneToNMapping.get(keys[x]);
         value = duplicatedKeys.map(k => documentValuePairs[y].get(k) || '').join('');
         similarity = Math.max(...duplicatedKeys.map(k => documentSimilarityPairs[y].has(k) ? documentSimilarityPairs[y].get(k) : 0));
         valueConfidence = Math.max(...duplicatedKeys.map(k => documentConfidencePairs[y].get(k) || 0));
+        geometry = duplicatedKeys.map(k => documentAnswerGeometryPairs[y].get(k)).filter(k => k !== undefined)[0];
       } else {
         value = documentValuePairs[y].get(keys[x]) || '';
         similarity = documentSimilarityPairs[y].has(keys[x]) ? documentSimilarityPairs[y].get(keys[x]) : 0;
         valueConfidence = documentConfidencePairs[y].get(keys[x]) || 0;
+        geometry = documentAnswerGeometryPairs[y].get(keys[x]) || {};
       }
       documentValueWorkSheet.cell(y + 2, x + 1).string(value);
       documentSimilarityWorkSheet.cell(y + 2, x + 1).number(similarity);
       documentConfidenceWorkSheet.cell(y + 2, x + 1).number(valueConfidence);
+      documentGeometryWorkSheet.cell(y + 2, x + 1).string(JSON.stringify(geometry));
     }
   }
   return {
