@@ -32,7 +32,7 @@ exports.lambdaHandler = async (event) => {
 
   let standardAnswerMap = event.result.QuestionAndAnswerList.map(a => ({
     key: a.key,
-    val: answerOverride.has(a.key) ? answerOverride.get(a.key) : a.val,
+    val: a.val,
   }))
   .reduce((acc, curr) => {
     if (!acc.has(curr.key)) {
@@ -40,6 +40,10 @@ exports.lambdaHandler = async (event) => {
     }
     return acc;
   }, new Map());
+
+  answerOverride.forEach((value, key) => {
+    standardAnswerMap.set(key, value);
+  });
 
   const mappingExcelKey = event.scripts.key.replace('.pdf', '_mapping.xlsx');
   const isMappingExist = await isS3ObjectExist(process.env['DestinationBucket'], mappingExcelKey);
