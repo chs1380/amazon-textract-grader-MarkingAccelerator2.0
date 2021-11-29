@@ -105,7 +105,8 @@ exports.lambdaHandler = async (event) => {
   event.email = excelKey.match(regex)[0];
   let subject = event.scripts ? event.scripts.key : event.key;
   event.subject = subject.replace(event.email + '/', '');
-  event.message = '';
+  const downloadReport = getS3PreSignedUrl(process.env['DestinationBucket'], excelKey, expires);
+  event.message = '\n\nDownload report: ' + downloadReport;
   return event;
 };
 
