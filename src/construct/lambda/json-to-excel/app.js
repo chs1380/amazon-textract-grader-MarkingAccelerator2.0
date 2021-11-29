@@ -6,6 +6,7 @@ const readFile = promisify(fs.readFile);
 const xl = require('excel4node');
 const path = require('path');
 
+const expires = 604800; //7 days
 
 exports.lambdaHandler = async (event) => {
   let key = event.keyValuePairJson; // End with _keyValue.json
@@ -15,23 +16,13 @@ exports.lambdaHandler = async (event) => {
     withAnswerSimilarity = true;
   }
 
-  const keyValuePairJson = await getS3Json(process.env['DestinationBucket'], key);
+  const imagePrefix = key.replace('_keyValue.json', '/');
 
   const wb = new xl.Workbook();
-  const documentSheet = {};
-  documentSheet.workbook = wb;
-  documentSheet.value = wb.addWorksheet('DocumentValue');
-  documentSheet.confidence = wb.addWorksheet('DocumentConfidence');
-  documentSheet.similarity = wb.addWorksheet('DocumentAnswerSimilarity');
-  documentSheet.geometry = wb.addWorksheet('DocumentAnswerGeometry');
+  const documentSheet = getSheets(wb, 'Document');
+  const pageSheet = getSheets(wb, 'Page');
 
-  const pageSheet = {};
-  pageSheet.workbook = wb;
-  pageSheet.value = wb.addWorksheet('PageValue');
-  pageSheet.confidence = wb.addWorksheet('PageConfidence');
-  pageSheet.similarity = wb.addWorksheet('PageAnswerSimilarity');
-  pageSheet.geometry = wb.addWorksheet('PageAnswerGeometry');
-
+  const keyValuePairJson = await getS3Json(process.env['DestinationBucket'], key);
   let keys = Array.from(new Set(keyValuePairJson.map((c) => c.key))).sort();
   const pages = Array.from(new Set(keyValuePairJson.map((c) => c.page))).sort(
     (a, b) => a - b,
@@ -58,6 +49,7 @@ exports.lambdaHandler = async (event) => {
     keyValuePairJson,
     questionAnswerSimilarityMap,
     oneToNMapping,
+    imagePrefix,
   );
   const pairs = popularDocumentSheet(
     documentSheet,
@@ -67,6 +59,7 @@ exports.lambdaHandler = async (event) => {
     questionAnswerSimilarityMap,
     oneToNMapping,
     nToOneMapping,
+    imagePrefix,
   );
 
   const getPairKey = property => key.replace('_keyValue.json', `_${property}.json`);
@@ -114,6 +107,17 @@ exports.lambdaHandler = async (event) => {
   event.subject = subject.replace(event.email + '/', '');
   event.message = '';
   return event;
+};
+
+const getSheets = (wb, prefix) => {
+  const sheet = {};
+  sheet.workbook = wb;
+  sheet.value = wb.addWorksheet(prefix + 'Value', {});
+  sheet.confidence = wb.addWorksheet(prefix + 'Confidence', {});
+  sheet.similarity = wb.addWorksheet(prefix + 'AnswerSimilarity', {});
+  sheet.geometry = wb.addWorksheet(prefix + 'AnswerGeometry', {});
+  sheet.image = wb.addWorksheet(prefix + 'AnswerImage', {});
+  return sheet;
 };
 
 const populateMapping = (nToOneMapping, keys, oneToNMapping, event) => {
@@ -190,15 +194,17 @@ const getSimilarity = (question, answer, questionAnswerSimilarityMap) => {
   }
   return 0;
 };
-const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages, nToOneMapping) => {
+const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages, nToOneMapping, imagePrefix) => {
   let individualKeyValue = new Map();
   let individualConfidenceValue = new Map();
   let individualSimilarityValue = new Map();
   let individualAnswerGeometryValue = new Map();
+  let individualAnswerPageImageValue = new Map();
   let documentValuePairs = [];
   let documentConfidencePairs = [];
   let documentSimilarityPairs = [];
   let documentAnswerGeometryPairs = [];
+  let documentAnswerPageImagePairs = [];
 
   for (let y = 0; y < pages.length; y++) {
     let kvs = keyValuePairJson.filter((c) => c.page === pages[y]);
@@ -208,10 +214,12 @@ const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages, 
       documentConfidencePairs.push(individualConfidenceValue);
       documentSimilarityPairs.push(individualSimilarityValue);
       documentAnswerGeometryPairs.push(individualAnswerGeometryValue);
+      documentAnswerPageImagePairs.push(individualAnswerPageImageValue);
       individualKeyValue = new Map();
       individualConfidenceValue = new Map();
       individualSimilarityValue = new Map();
       individualAnswerGeometryValue = new Map();
+      individualAnswerPageImageValue = new Map();
     }
 
     kvs.map(c => individualKeyValue.set(c.key, c.val));
@@ -228,22 +236,29 @@ const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages, 
       if (valGeometry) valGeometry['page'] = y;
       individualAnswerGeometryValue.set(c.key, valGeometry);
     });
+
+    kvs.map(c => {
+      let image = imagePrefix + 'p-' + c.page + '.png';
+      individualAnswerPageImageValue.set(c.key, image);
+    });
   }
   documentValuePairs.push(individualKeyValue);
   documentConfidencePairs.push(individualConfidenceValue);
   documentSimilarityPairs.push(individualSimilarityValue);
   documentAnswerGeometryPairs.push(individualAnswerGeometryValue);
+  documentAnswerPageImagePairs.push(individualAnswerPageImageValue);
 
   return {
     documentValuePairs,
     documentConfidencePairs,
     documentSimilarityPairs,
     documentAnswerGeometryPairs,
+    documentAnswerPageImagePairs,
   };
 };
 
-const printHeader = (keys, questionAnswerSimilarityMap, sheet) => {
-  const bgStyle = sheet.workbook.createStyle({
+const printHeader = (keys, questionAnswerSimilarityMap, sheetObject) => {
+  const bgStyle = sheetObject.workbook.createStyle({
     fill: {
       type: 'pattern',
       patternType: 'solid',
@@ -251,27 +266,26 @@ const printHeader = (keys, questionAnswerSimilarityMap, sheet) => {
       fgColor: '#ffff00',
     },
   });
-  for (let x = 0; x < keys.length; x++) {
-    const question = keys[x];
-    const isNotMatch = !questionAnswerSimilarityMap.has(question);
-    if (isNotMatch) {
-      sheet.value.cell(1, x + 1).style(bgStyle);
-      sheet.confidence.cell(1, x + 1).style(bgStyle);
-      sheet.similarity.cell(1, x + 1).style(bgStyle);
-      sheet.geometry.cell(1, x + 1).style(bgStyle);
+  for (const property in sheetObject) {
+    if (property === 'workbook') continue;
+    const sheet = sheetObject[property];
+    for (let x = 0; x < keys.length; x++) {
+      const question = keys[x];
+      const isNotMatch = !questionAnswerSimilarityMap.has(question);
+      if (isNotMatch) {
+        sheet.cell(1, x + 1).style(bgStyle);
+      }
+      sheet.cell(1, x + 1).string(question);
     }
-    sheet.value.cell(1, x + 1).string(question);
-    sheet.confidence.cell(1, x + 1).string(question);
-    sheet.similarity.cell(1, x + 1).string(question);
-    sheet.geometry.cell(1, x + 1).string(question);
   }
 };
 
-const printContent = (sheet, y, x, value, similarity, valueConfidence, geometry) => {
+const printContent = (sheet, y, x, value, similarity, valueConfidence, geometry, image) => {
   sheet.value.cell(y + 2, x + 1).string(value);
   sheet.similarity.cell(y + 2, x + 1).number(similarity);
   sheet.confidence.cell(y + 2, x + 1).number(valueConfidence);
   sheet.geometry.cell(y + 2, x + 1).string(JSON.stringify(geometry));
+  sheet.image.cell(y + 2, x + 1).string(image);
 };
 
 const popularPageSheet = (
@@ -281,12 +295,13 @@ const popularPageSheet = (
   keyValuePairJson,
   questionAnswerSimilarityMap,
   oneToNMapping,
+  imagePrefix,
 ) => {
   printHeader(keys, questionAnswerSimilarityMap, pageSheet);
 
   for (let x = 0; x < keys.length; x++) {
     for (let y = 0; y < pages.length; y++) {
-      let value, valueConfidence, similarity, geometry, data;
+      let data;
       if (oneToNMapping.has(keys[x])) {
         const duplicatedKeys = oneToNMapping.get(keys[x]);
         // no need merge as only key mapping must only has one value!
@@ -301,11 +316,14 @@ const popularPageSheet = (
         )[0];
       }
       if (data) {
+        let value, valueConfidence, similarity, geometry, image;
         value = data.val;
         valueConfidence = data.valueConfidence;
         similarity = getSimilarity(keys[x], data.val, questionAnswerSimilarityMap);
         geometry = JSON.stringify(data.valGeometry);
-        printContent(pageSheet, y, x, value, similarity, valueConfidence, geometry);
+        image = imagePrefix + 'p-' + data.page + '.png';
+        image = getS3PreSignedUrl(process.env['DestinationBucket'], image, expires);
+        printContent(pageSheet, y, x, value, similarity, valueConfidence, geometry, image);
       }
     }
   }
@@ -320,36 +338,43 @@ const popularDocumentSheet = (
   questionAnswerSimilarityMap,
   oneToNMapping,
   nToOneMapping,
+  imagePrefix,
 ) => {
   let {
     documentValuePairs,
     documentConfidencePairs,
     documentSimilarityPairs,
     documentAnswerGeometryPairs,
+    documentAnswerPageImagePairs,
   } = getDocumentPairs(
     keyValuePairJson,
     questionAnswerSimilarityMap,
     pages,
     nToOneMapping,
+    imagePrefix,
   );
   printHeader(keys, questionAnswerSimilarityMap, documentSheet);
 
   for (let x = 0; x < keys.length; x++) {
     for (let y = 0; y < documentValuePairs.length; y++) {
-      let value, valueConfidence, similarity, geometry;
+      let value, valueConfidence, similarity, geometry, image;
       if (oneToNMapping.has(keys[x])) {
         const duplicatedKeys = oneToNMapping.get(keys[x]);
         value = duplicatedKeys.map(k => documentValuePairs[y].get(k) || '').join('');
         similarity = Math.max(...duplicatedKeys.map(k => documentSimilarityPairs[y].has(k) ? documentSimilarityPairs[y].get(k) : 0));
         valueConfidence = Math.max(...duplicatedKeys.map(k => documentConfidencePairs[y].get(k) || 0));
         geometry = duplicatedKeys.map(k => documentAnswerGeometryPairs[y].get(k)).filter(k => k !== undefined)[0];
+        image = duplicatedKeys.map(k => documentAnswerPageImagePairs[y].get(k)).filter(k => k !== undefined)[0];
+
       } else {
         value = documentValuePairs[y].get(keys[x]) || '';
         similarity = documentSimilarityPairs[y].has(keys[x]) ? documentSimilarityPairs[y].get(keys[x]) : 0;
         valueConfidence = documentConfidencePairs[y].get(keys[x]) || 0;
         geometry = documentAnswerGeometryPairs[y].get(keys[x]) || {};
+        image = documentAnswerPageImagePairs[y].get(keys[x]) || '';
       }
-      printContent(documentSheet, y, x, value, similarity, valueConfidence, geometry);
+      if (image) image = getS3PreSignedUrl(process.env['DestinationBucket'], image, expires);
+      printContent(documentSheet, y, x, value, similarity, valueConfidence, geometry, image);
     }
   }
   return {
@@ -357,6 +382,7 @@ const popularDocumentSheet = (
     documentConfidencePairs,
     documentSimilarityPairs,
     documentAnswerGeometryPairs,
+    documentAnswerPageImagePairs,
   };
 };
 
@@ -371,7 +397,6 @@ const writeExcel = (workbook, filePath) => {
     });
   });
 };
-
 
 const s3download = async (bucketName, keyName, localDest) => {
   if (typeof localDest == 'undefined') {
@@ -391,4 +416,12 @@ const getS3Json = async (bucketName, key) => {
   await s3download(bucketName, key, filePath);
   const rawData = fs.readFileSync(filePath);
   return JSON.parse(rawData);
+};
+
+const getS3PreSignedUrl = (bucketName, keyName, expires) => {
+  return s3.getSignedUrl('getObject', {
+    Bucket: bucketName,
+    Key: keyName,
+    Expires: expires,
+  });
 };
