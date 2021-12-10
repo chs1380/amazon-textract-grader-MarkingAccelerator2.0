@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "sharp": "^0.25.4"
+    "sharp": "^0.29.3"
   },
   "devDependencies": {},
   "scripts": {

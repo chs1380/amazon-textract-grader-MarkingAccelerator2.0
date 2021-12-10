@@ -2,6 +2,7 @@
 !/.gitattributes
 !/.projen/tasks.json
 !/.projen/deps.json
+!/.github/workflows/pull-request-lint.yml
 !/.github/workflows/stale.yml
 !/package.json
 !/LICENSE
@@ -43,7 +44,7 @@ junit.xml
 /lib
 /dist/
 !/.eslintrc.json
-cdk.out/
+/cdk.out/
 .cdk.staging/
 .parcel-cache/
 !/.github/workflows/upgrade.yml

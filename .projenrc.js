@@ -1,5 +1,5 @@
-const { AwsCdkTypeScriptApp } = require('projen');
-const project = new AwsCdkTypeScriptApp({
+const { awscdk } = require('projen');
+const project = new awscdk.AwsCdkTypeScriptApp({
   authorName: 'Cyrus Wong',
   authorEmail: 'cywong@vtc.edu.hk',
   repository: 'https://github.com/wongcyrus/amazon-textract-grader',

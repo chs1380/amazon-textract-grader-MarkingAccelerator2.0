@@ -1,5 +1,29 @@
 {
   "tasks": {
+    "build": {
+      "name": "build",
+      "description": "Full release build",
+      "steps": [
+        {
+          "spawn": "default"
+        },
+        {
+          "spawn": "pre-compile"
+        },
+        {
+          "spawn": "compile"
+        },
+        {
+          "spawn": "post-compile"
+        },
+        {
+          "spawn": "test"
+        },
+        {
+          "spawn": "package"
+        }
+      ]
+    },
     "clobber": {
       "name": "clobber",
       "description": "hard resets to HEAD of origin and cleans the local repo",
@@ -36,89 +60,12 @@
       "name": "compile",
       "description": "Only compile"
     },
-    "test": {
-      "name": "test",
-      "description": "Run tests",
-      "steps": [
-        {
-          "exec": "rm -fr lib/"
-        },
-        {
-          "exec": "jest --passWithNoTests --all --updateSnapshot"
-        },
-        {
-          "spawn": "eslint"
-        }
-      ]
-    },
-    "build": {
-      "name": "build",
-      "description": "Full release build (test+compile)",
-      "steps": [
-        {
-          "exec": "npx projen"
-        },
-        {
-          "spawn": "test"
-        },
-        {
-          "spawn": "compile"
-        },
-        {
-          "spawn": "synth"
-        }
-      ]
-    },
-    "test:watch": {
-      "name": "test:watch",
-      "description": "Run jest in watch mode",
-      "steps": [
-        {
-          "exec": "jest --watch"
-        }
-      ]
-    },
-    "test:update": {
-      "name": "test:update",
-      "description": "Update jest snapshots",
-      "steps": [
-        {
-          "exec": "jest --updateSnapshot"
-        }
-      ]
-    },
     "default": {
       "name": "default",
+      "description": "Synthesize project files",
       "steps": [
         {
           "exec": "node .projenrc.js"
-        }
-      ]
-    },
-    "watch": {
-      "name": "watch",
-      "description": "Watch & compile in the background",
-      "steps": [
-        {
-          "exec": "tsc --build -w"
-        }
-      ]
-    },
-    "eslint": {
-      "name": "eslint",
-      "description": "Runs eslint against the codebase",
-      "steps": [
-        {
-          "exec": "eslint --ext .ts,.tsx --fix --no-error-on-unmatched-pattern src test build-tools .projenrc.js"
-        }
-      ]
-    },
-    "synth": {
-      "name": "synth",
-      "description": "Synthesizes your cdk app into cdk.out (part of \"yarn build\")",
-      "steps": [
-        {
-          "exec": "cdk synth"
         }
       ]
     },
@@ -128,6 +75,14 @@
       "steps": [
         {
           "exec": "cdk deploy"
+        }
+      ]
+    },
+    "deploy-hotswap": {
+      "name": "deploy-hotswap",
+      "steps": [
+        {
+          "exec": "cdk deploy --hotswap --require-approval never"
         }
       ]
     },
@@ -149,11 +104,68 @@
         }
       ]
     },
-    "deploy-hotswap": {
-      "name": "deploy-hotswap",
+    "eslint": {
+      "name": "eslint",
+      "description": "Runs eslint against the codebase",
       "steps": [
         {
-          "exec": "cdk deploy --hotswap --require-approval never"
+          "exec": "eslint --ext .ts,.tsx --fix --no-error-on-unmatched-pattern src test build-tools .projenrc.js"
+        }
+      ]
+    },
+    "package": {
+      "name": "package",
+      "description": "Creates the distribution package"
+    },
+    "post-compile": {
+      "name": "post-compile",
+      "description": "Runs after successful compilation",
+      "steps": [
+        {
+          "spawn": "synth"
+        }
+      ]
+    },
+    "pre-compile": {
+      "name": "pre-compile",
+      "description": "Prepare the project for compilation"
+    },
+    "synth": {
+      "name": "synth",
+      "description": "Synthesizes your cdk app into cdk.out (part of \"yarn build\")",
+      "steps": [
+        {
+          "exec": "cdk synth"
+        }
+      ]
+    },
+    "test": {
+      "name": "test",
+      "description": "Run tests",
+      "steps": [
+        {
+          "exec": "jest --passWithNoTests --all --updateSnapshot"
+        },
+        {
+          "spawn": "eslint"
+        }
+      ]
+    },
+    "test:update": {
+      "name": "test:update",
+      "description": "Update jest snapshots",
+      "steps": [
+        {
+          "exec": "jest --updateSnapshot"
+        }
+      ]
+    },
+    "test:watch": {
+      "name": "test:watch",
+      "description": "Run jest in watch mode",
+      "steps": [
+        {
+          "exec": "jest --watch"
         }
       ]
     },
@@ -183,7 +195,7 @@
           "exec": "yarn install --check-files"
         },
         {
-          "exec": "yarn upgrade @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser aws-cdk eslint eslint-import-resolver-node eslint-import-resolver-typescript eslint-plugin-import jest jest-junit json-schema npm-check-updates ts-jest ts-node typescript @aws-cdk/assert @aws-cdk/aws-apigateway @aws-cdk/aws-dynamodb @aws-cdk/aws-ecr @aws-cdk/aws-iam @aws-cdk/aws-lambda @aws-cdk/aws-s3 @aws-cdk/aws-sns-subscriptions @aws-cdk/aws-sns @aws-cdk/aws-stepfunctions-tasks @aws-cdk/aws-stepfunctions @aws-cdk/core"
+          "exec": "yarn upgrade @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser aws-cdk eslint-import-resolver-node eslint-import-resolver-typescript eslint-plugin-import eslint jest jest-junit json-schema npm-check-updates ts-jest ts-node typescript @aws-cdk/assert @aws-cdk/aws-apigateway @aws-cdk/aws-dynamodb @aws-cdk/aws-ecr @aws-cdk/aws-iam @aws-cdk/aws-lambda @aws-cdk/aws-s3 @aws-cdk/aws-sns-subscriptions @aws-cdk/aws-sns @aws-cdk/aws-stepfunctions-tasks @aws-cdk/aws-stepfunctions @aws-cdk/core"
         },
         {
           "exec": "npx projen"
@@ -220,6 +232,15 @@
         },
         {
           "exec": "npx projen"
+        }
+      ]
+    },
+    "watch": {
+      "name": "watch",
+      "description": "Watch & compile in the background",
+      "steps": [
+        {
+          "exec": "tsc --build -w"
         }
       ]
     }
