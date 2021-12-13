@@ -1,11 +1,12 @@
-import { PolicyStatement, Role, ServicePrincipal } from '@aws-cdk/aws-iam';
-import { Bucket } from '@aws-cdk/aws-s3';
-import * as sns from '@aws-cdk/aws-sns';
-import * as sfn from '@aws-cdk/aws-stepfunctions';
-import { Choice, StateMachine, Wait } from '@aws-cdk/aws-stepfunctions';
-import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
-import { WaitTime } from '@aws-cdk/aws-stepfunctions/lib/states/wait';
-import { Construct, Duration } from '@aws-cdk/core';
+import { Duration } from 'aws-cdk-lib';
+import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import { Choice, StateMachine, Wait } from 'aws-cdk-lib/aws-stepfunctions';
+import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
+
+import { Construct } from 'constructs';
 
 
 export interface AmazonTextractMultiPagesDocumentsStateMachineConstructProps {
@@ -94,7 +95,7 @@ export class AmazonTextractMultiPagesDocumentsStateMachineConstruct extends Cons
 
     const wait = new Wait(this, 'Wait 1 minute', {
       comment: 'Wait 1 minute\'',
-      time: WaitTime.duration(Duration.minutes(1)),
+      time: sfn.WaitTime.duration(Duration.minutes(1)),
     });
 
     const choice = new Choice(this, 'Check Job Status')

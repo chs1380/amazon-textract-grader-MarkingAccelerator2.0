@@ -1,8 +1,9 @@
 import path from 'path';
-import * as lambda from '@aws-cdk/aws-lambda';
-import { Code, IFunction, ILayerVersion, Runtime, Tracing } from '@aws-cdk/aws-lambda';
-import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
-import { Construct, Duration } from '@aws-cdk/core';
+import { Duration } from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { Code, IFunction, ILayerVersion, Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
+import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
+import { Construct } from 'constructs';
 
 
 export class LambdaHelper {

@@ -1,9 +1,9 @@
-import { ILayerVersion } from '@aws-cdk/aws-lambda';
-import { Bucket } from '@aws-cdk/aws-s3';
-import * as sfn from '@aws-cdk/aws-stepfunctions';
-import { Condition, Pass, StateMachine, Wait } from '@aws-cdk/aws-stepfunctions';
-import { WaitTime } from '@aws-cdk/aws-stepfunctions/lib/states/wait';
-import { Construct, Duration } from '@aws-cdk/core';
+import { Duration } from 'aws-cdk-lib';
+import { ILayerVersion } from 'aws-cdk-lib/aws-lambda';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import { Condition, Pass, StateMachine, Wait } from 'aws-cdk-lib/aws-stepfunctions';
+import { Construct } from 'constructs';
 import { LambdaHelper } from './lib/lambda-helper';
 
 
@@ -58,7 +58,7 @@ export class CorrectPdfOrientationStateMachineConstruct extends Construct {
     skipRotationChoice.otherwise(analyzeDocumentImagesTask
       .next(correctImageOrientationTask).next(new Wait(this, 'Wait 5 seconds', {
         comment: 'Wait 5 seconds',
-        time: WaitTime.duration(Duration.seconds(5)),
+        time: sfn.WaitTime.duration(Duration.seconds(5)),
       })));
     skipRotationChoice.afterwards().next(imagesToPdfTask);
 

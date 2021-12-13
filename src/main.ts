@@ -1,8 +1,9 @@
-import { Bucket } from '@aws-cdk/aws-s3';
-import { SubscriptionFilter } from '@aws-cdk/aws-sns';
-import { EmailSubscription } from '@aws-cdk/aws-sns-subscriptions';
-import { App, CfnOutput, Construct, RemovalPolicy, Stack, StackProps } from '@aws-cdk/core';
+import { App, CfnOutput, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { SubscriptionFilter } from 'aws-cdk-lib/aws-sns';
+import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
 
+import { Construct } from 'constructs';
 import { AssignmentsTextractStateMachineConstruct } from './construct/assignments-textract-state-machine';
 
 

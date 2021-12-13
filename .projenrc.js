@@ -3,7 +3,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   authorName: 'Cyrus Wong',
   authorEmail: 'cywong@vtc.edu.hk',
   repository: 'https://github.com/wongcyrus/amazon-textract-grader',
-  cdkVersion: '1.134.0',
+  cdkVersion: '2.1.0',
   defaultReleaseBranch: 'main',
   name: 'amazon-textract-grader',
   context: {
@@ -11,16 +11,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     email: process.env.email ?? 'dummy@email.com',
   },
   cdkDependencies: [
-    '@aws-cdk/aws-s3',
-    '@aws-cdk/aws-dynamodb',
-    '@aws-cdk/aws-ecr',
-    '@aws-cdk/aws-lambda',
-    '@aws-cdk/aws-sns',
-    '@aws-cdk/aws-sns-subscriptions',
-    '@aws-cdk/aws-iam',
-    '@aws-cdk/aws-stepfunctions',
-    '@aws-cdk/aws-stepfunctions-tasks',
-    '@aws-cdk/aws-apigateway',
+
   ], /* Which AWS CDK modules (those that start with "@aws-cdk/") this app uses. */
   keywords: [
     'cdk',

@@ -1,9 +1,10 @@
-import { Bucket } from '@aws-cdk/aws-s3';
-import { Topic } from '@aws-cdk/aws-sns';
-import * as sfn from '@aws-cdk/aws-stepfunctions';
-import { Choice, IntegrationPattern, StateMachine, TaskInput } from '@aws-cdk/aws-stepfunctions';
-import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
-import { Construct, Duration } from '@aws-cdk/core';
+import { Duration } from 'aws-cdk-lib';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { Topic } from 'aws-cdk-lib/aws-sns';
+import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import { Choice, IntegrationPattern, StateMachine, TaskInput } from 'aws-cdk-lib/aws-stepfunctions';
+import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
+import { Construct } from 'constructs';
 import { AiGraderStateMachineConstruct } from './ai-grader-state-machine';
 import { HumanApprovalStateMachineConstruct } from './human-approval-state-machine';
 

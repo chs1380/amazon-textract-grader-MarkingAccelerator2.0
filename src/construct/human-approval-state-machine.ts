@@ -1,12 +1,12 @@
-import { LambdaRestApi } from '@aws-cdk/aws-apigateway';
-import { PolicyStatement } from '@aws-cdk/aws-iam';
-import { ILayerVersion } from '@aws-cdk/aws-lambda';
-import { Topic } from '@aws-cdk/aws-sns';
-import * as sfn from '@aws-cdk/aws-stepfunctions';
-import { Choice, IntegrationPattern, StateMachine } from '@aws-cdk/aws-stepfunctions';
-import * as tasks from '@aws-cdk/aws-stepfunctions-tasks';
-import { TaskInput } from '@aws-cdk/aws-stepfunctions/lib/input';
-import { Construct, Duration } from '@aws-cdk/core';
+import { Duration } from 'aws-cdk-lib';
+import { LambdaRestApi } from 'aws-cdk-lib/aws-apigateway';
+import { Policy, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { ILayerVersion } from 'aws-cdk-lib/aws-lambda';
+import { Topic } from 'aws-cdk-lib/aws-sns';
+import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import { Choice, IntegrationPattern, StateMachine } from 'aws-cdk-lib/aws-stepfunctions';
+import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
+import { Construct } from 'constructs';
 import { LambdaHelper } from './lib/lambda-helper';
 
 export interface HumanApprovalStateMachineConstructProps {
@@ -40,7 +40,7 @@ export class HumanApprovalStateMachineConstruct extends Construct {
 
     const stepFunctionApprovalEmailTask = new tasks.LambdaInvoke(this, 'stepFunctionApprovalEmailTask', {
       lambdaFunction: stepFunctionApprovalEmailFunction,
-      payload: TaskInput.fromObject({
+      payload: sfn.TaskInput.fromObject({
         ExecutionContext: sfn.JsonPath.entireContext,
         APIGatewayEndpoint: lambdaRestApi.url,
         Email: sfn.JsonPath.stringAt(props.emailInputPath ?? '$.email'),
@@ -64,12 +64,13 @@ export class HumanApprovalStateMachineConstruct extends Construct {
       timeout: Duration.minutes(180),
     });
 
-    stepFunctionApprovalFunction.role?.addToPolicy(new PolicyStatement({
-      resources: ['*'],
-      actions: ['states:SendTaskFailure', 'states:SendTaskSuccess'],
-    }));
-
-
+    const sendTaskResultPolicy = new Policy(this, 'SendTaskResult', {
+      statements: [new PolicyStatement({
+        resources: ['*'],
+        actions: ['states:SendTaskFailure', 'states:SendTaskSuccess'],
+      })],
+    });
+    stepFunctionApprovalFunction.role?.attachInlinePolicy(sendTaskResultPolicy);
   }
 
   private getLambdaFunction(assetPath: string, layers: ILayerVersion[], suffix: string = '') {
