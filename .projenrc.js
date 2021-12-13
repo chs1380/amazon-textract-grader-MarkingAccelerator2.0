@@ -27,6 +27,6 @@ const project = new awscdk.AwsCdkTypeScriptApp({
 project.addTask('deploy-hotswap', {
   exec: 'cdk deploy --hotswap --require-approval never',
 });
-project.gitignore.removePatterns('!/cdk.json');
+project.gitignore.addPatterns('cdk.json');
 
 project.synth();
