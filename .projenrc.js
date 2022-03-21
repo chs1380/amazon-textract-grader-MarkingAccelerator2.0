@@ -3,14 +3,14 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   authorName: 'Cyrus Wong',
   authorEmail: 'cywong@vtc.edu.hk',
   repository: 'https://github.com/wongcyrus/amazon-textract-grader',
-  cdkVersion: '2.1.0',
+  cdkVersion: '2.17.0',
   defaultReleaseBranch: 'main',
   name: 'amazon-textract-grader',
   context: {
     namePrefix: 'grader',
     email: process.env.email ?? 'dummy@email.com',
   },
-  cdkDependencies: [
+  deps: [
 
   ], /* Which AWS CDK modules (those that start with "@aws-cdk/") this app uses. */
   keywords: [

@@ -7,6 +7,6 @@
   "author": "Cyrus Wong",
   "license": "MIT",
   "dependencies": {
-    "fs-extra": "^10.0.0"
+    "fs-extra": "^10.0.1"
   }
 }

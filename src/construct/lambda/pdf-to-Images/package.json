@@ -7,7 +7,7 @@
   "author": "Cyrus Wong",
   "license": "MIT",
   "dependencies": {
-    "fs-extra": "^10.0.0",
+    "fs-extra": "^10.0.1",
     "gm": "^1.23.1",
     "node-gs": "^0.1.1",
     "pdf2img-lambda-friendly": "2.0.0"
