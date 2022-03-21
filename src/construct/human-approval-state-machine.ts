@@ -45,7 +45,7 @@ export class HumanApprovalStateMachineConstruct extends Construct {
         APIGatewayEndpoint: lambdaRestApi.url,
         Email: sfn.JsonPath.stringAt(props.emailInputPath ?? '$.email'),
         Subject: sfn.JsonPath.stringAt(props.subjectInputPath ?? '$.subject'),
-        Message: sfn.JsonPath.stringAt(props.messageInputPath ?? '$.message'),
+        Message: props.messageInputPath ?? sfn.JsonPath.stringAt('$.message'),
       }),
       timeout: Duration.hours(3),
       integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,

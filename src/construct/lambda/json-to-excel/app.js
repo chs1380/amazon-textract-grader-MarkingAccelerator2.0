@@ -106,7 +106,7 @@ exports.lambdaHandler = async (event) => {
   let subject = event.scripts ? event.scripts.key : event.key;
   event.subject = subject.replace(event.email + '/', '');
   const downloadReport = getS3PreSignedUrl(process.env['DestinationBucket'], excelKey, expires);
-  event.message = '\n\nDownload report: ' + downloadReport;
+  event.message = `Download ${event.subject}: ` + downloadReport;
   return event;
 };
 
@@ -122,25 +122,39 @@ const getSheets = (wb, prefix) => {
 };
 
 const populateMapping = (nToOneMapping, keys, oneToNMapping, event) => {
-  nToOneMapping = new Map(Object.entries(nToOneMapping));
-  console.log(nToOneMapping);
-  keys = keys.map(k => nToOneMapping.has(k) ? nToOneMapping.get(k) : k);
-  keys = Array.from(new Set(keys)).sort();
-  console.log(keys);
-  oneToNMapping = Array.from(event.mapping)
+  oneToNMapping = Object.entries(event.mapping)
   .map(([key, value]) => ({
     key,
     value,
   }))
   .reduce((acc, curr) => {
-
     if (!acc.has(curr.value)) {
       acc.set(curr.value, []);
     }
     acc.get(curr.value).push(curr.key);
     return acc;
   }, new Map());
+
+  nToOneMapping = Object.entries(event.mapping)
+  .map(([key, value]) => ({
+    key,
+    value,
+  }))
+  .reduce((acc, curr) => {
+    if (!acc.has(curr.key)) {
+      acc.set(curr.key, curr.value);
+    }
+    return acc;
+  }, new Map());
+  keys = keys.map(c=>{
+    if(nToOneMapping.has(c)) return nToOneMapping.get(c);
+    return c;
+  });
+  keys = Array.from(new Set(keys)).sort();
+  console.log("populateMapping");
+  console.log(keys);
   console.log(oneToNMapping);
+  console.log(nToOneMapping);
   return {
     nToOneMapping,
     keys,
@@ -283,7 +297,8 @@ const printHeader = (keys, questionAnswerSimilarityMap, sheetObject) => {
 
 const printContent = (sheet, y, x, value, similarity, valueConfidence, geometry, image) => {
   sheet.value.cell(y + 2, x + 1).string(value);
-  sheet.similarity.cell(y + 2, x + 1).number(similarity);
+  if(similarity)
+    sheet.similarity.cell(y + 2, x + 1).number(similarity);
   sheet.confidence.cell(y + 2, x + 1).number(valueConfidence);
   sheet.geometry.cell(y + 2, x + 1).string(JSON.stringify(geometry));
   sheet.image.cell(y + 2, x + 1).string(image);

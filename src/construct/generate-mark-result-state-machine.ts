@@ -2,7 +2,7 @@ import { Duration } from 'aws-cdk-lib';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Topic } from 'aws-cdk-lib/aws-sns';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
-import { Choice, IntegrationPattern, StateMachine, TaskInput } from 'aws-cdk-lib/aws-stepfunctions';
+import { Choice, IntegrationPattern, JsonPath, StateMachine, TaskInput } from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
 import { AiGraderStateMachineConstruct } from './ai-grader-state-machine';
@@ -32,7 +32,7 @@ export class GenerateMarkResultStateMachineConstruct extends Construct {
       message: 'Please review the mark result. "Approve" to end this marking job. \n if it is not acceptable, upload mapping to S3, click "Reject" and re-generate the results.',
       emailInputPath: '$.scripts.email',
       subjectInputPath: '$.scripts.subject',
-      messageInputPath: '$.scripts.message',
+      messageInputPath: JsonPath.array(JsonPath.stringAt('$.scripts.message'), JsonPath.stringAt('$.standardAnswer.message')),
     });
     this.approvalTopic = humanApprovalStateMachineConstruct.approvalTopic;
 

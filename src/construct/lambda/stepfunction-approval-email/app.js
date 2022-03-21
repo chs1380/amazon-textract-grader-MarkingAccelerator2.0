@@ -28,7 +28,9 @@ exports.lambdaHandler = (event, context, callback) => {
   const emailSnsTopic = process.env.SNSHumanApprovalEmailTopic;
   console.log('emailSnsTopic= ' + emailSnsTopic);
 
-  const message = event.Message ?? '';
+  let message = event.Message ?? '';
+  if(Array.isArray(message))
+    message = message.join('\n');
 
   let emailMessage = 'Welcome! \n\n';
   emailMessage += process.env.message + message + '\n\n';
