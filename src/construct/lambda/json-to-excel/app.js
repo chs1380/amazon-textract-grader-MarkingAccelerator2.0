@@ -238,7 +238,7 @@ const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages, 
     }
 
     kvs.map(c => individualKeyValue.set(c.key, c.val));
-    kvs.map(c => individualConfidenceValue.set(c.key, c.valueConfidence));
+    kvs.map(c => individualConfidenceValue.set(c.key, c.valConfidence));
     kvs.map(c => {
       let key = c.key; //script key
       if (nToOneMapping.has(c.key)) {
@@ -295,11 +295,11 @@ const printHeader = (keys, questionAnswerSimilarityMap, sheetObject) => {
   }
 };
 
-const printContent = (sheet, y, x, value, similarity, valueConfidence, geometry, image) => {
+const printContent = (sheet, y, x, value, similarity, valConfidence, geometry, image) => {
   sheet.value.cell(y + 2, x + 1).string(value);
   if(similarity)
     sheet.similarity.cell(y + 2, x + 1).number(similarity);
-  sheet.confidence.cell(y + 2, x + 1).number(valueConfidence);
+  sheet.confidence.cell(y + 2, x + 1).number(valConfidence);
   sheet.geometry.cell(y + 2, x + 1).string(JSON.stringify(geometry));
   sheet.image.cell(y + 2, x + 1).string(image);
 };
@@ -332,14 +332,14 @@ const popularPageSheet = (
         )[0];
       }
       if (data) {
-        let value, valueConfidence, similarity, geometry, image;
+        let value, valConfidence, similarity, geometry, image;
         value = data.val;
-        valueConfidence = data.valueConfidence;
+        valConfidence = data.valConfidence;
         similarity = getSimilarity(keys[x], data.val, questionAnswerSimilarityMap);
         geometry = JSON.stringify(data.valGeometry);
         image = imagePrefix + 'p-' + data.page + '.png';
         image = getS3PreSignedUrl(process.env['DestinationBucket'], image, expires);
-        printContent(pageSheet, y, x, value, similarity, valueConfidence, geometry, image);
+        printContent(pageSheet, y, x, value, similarity, valConfidence, geometry, image);
       }
     }
   }
@@ -373,24 +373,24 @@ const popularDocumentSheet = (
 
   for (let x = 0; x < keys.length; x++) {
     for (let y = 0; y < documentValuePairs.length; y++) {
-      let value, valueConfidence, similarity, geometry, image;
+      let value, valConfidence, similarity, geometry, image;
       if (oneToNMapping.has(keys[x])) {
         const duplicatedKeys = oneToNMapping.get(keys[x]);
         value = duplicatedKeys.map(k => documentValuePairs[y].get(k) || '').join('');
         similarity = Math.max(...duplicatedKeys.map(k => documentSimilarityPairs[y].has(k) ? documentSimilarityPairs[y].get(k) : 0));
-        valueConfidence = Math.max(...duplicatedKeys.map(k => documentConfidencePairs[y].get(k) || 0));
+        valConfidence = Math.max(...duplicatedKeys.map(k => documentConfidencePairs[y].get(k) || 0));
         geometry = duplicatedKeys.map(k => documentAnswerGeometryPairs[y].get(k)).filter(k => k !== undefined)[0];
         image = duplicatedKeys.map(k => documentAnswerPageImagePairs[y].get(k)).filter(k => k !== undefined)[0];
 
       } else {
         value = documentValuePairs[y].get(keys[x]) || '';
         similarity = documentSimilarityPairs[y].has(keys[x]) ? documentSimilarityPairs[y].get(keys[x]) : 0;
-        valueConfidence = documentConfidencePairs[y].get(keys[x]) || 0;
+        valConfidence = documentConfidencePairs[y].get(keys[x]) || 0;
         geometry = documentAnswerGeometryPairs[y].get(keys[x]) || {};
         image = documentAnswerPageImagePairs[y].get(keys[x]) || '';
       }
       if (image) image = getS3PreSignedUrl(process.env['DestinationBucket'], image, expires);
-      printContent(documentSheet, y, x, value, similarity, valueConfidence, geometry, image);
+      printContent(documentSheet, y, x, value, similarity, valConfidence, geometry, image);
     }
   }
   return {

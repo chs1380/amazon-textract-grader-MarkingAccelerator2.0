@@ -29,7 +29,7 @@ export class GenerateMarkResultStateMachineConstruct extends Construct {
     });
     const humanApprovalStateMachineConstruct = new HumanApprovalStateMachineConstruct(this, 'HumanApprovalStateMachineConstruct', {
       title: 'Manual mapping task for your assignment: ',
-      message: 'Please review the mark result. "Approve" to end this marking job. \n if it is not acceptable, upload mapping to S3, click "Reject" and re-generate the results.',
+      message: 'Please review the marking result. "Approve" to end this marking job. \n if it is not acceptable, upload your mapping and/or answer override to S3, click "Reject" and re-generate the results.\n',
       emailInputPath: '$.scripts.email',
       subjectInputPath: '$.scripts.subject',
       messageInputPath: JsonPath.array(JsonPath.stringAt('$.scripts.message'), JsonPath.stringAt('$.standardAnswer.message')),

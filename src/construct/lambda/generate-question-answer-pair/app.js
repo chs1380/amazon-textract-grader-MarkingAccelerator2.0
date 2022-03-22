@@ -92,7 +92,7 @@ const getKeyValueRelationship = async (textractPrefix) => {
       keyGeometry: c.keyBlock.Geometry,
       valGeometry: c.valueBlock.Geometry,
       keyConfidence: c.keyBlock.Confidence,
-      valueConfidence: c.valueBlock.Confidence,
+      valConfidence: c.valueBlock.Confidence,
       page: c.keyBlock.Page,
     };
   })
@@ -181,7 +181,7 @@ const getKeyValueRelationship = async (textractPrefix) => {
           return '';
         })(),
         valGeometry: a.checkboxes.length === 1 ? (a.checkboxes[0].selection ? a.checkboxes[0].selection.Geometry : (a.checkboxes[0].content ? a.checkboxes[0].content.Geometry : null)) : null,
-        valueConfidence: a.checkboxes.length === 1 ? (a.checkboxes[0].selection ? a.checkboxes[0].selection.Confidence : (a.checkboxes[0].content ? a.checkboxes[0].content.Confidence : 1)) : 1,
+        valConfidence: a.checkboxes.length === 1 ? (a.checkboxes[0].selection ? a.checkboxes[0].selection.Confidence : (a.checkboxes[0].content ? a.checkboxes[0].content.Confidence : 1)) : 1,
       }))
       .forEach(a => acc.push(a));
       return acc;
