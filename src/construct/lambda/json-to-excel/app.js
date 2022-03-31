@@ -248,7 +248,7 @@ const getDocumentPairs = (keyValuePairJson, questionAnswerSimilarityMap, pages, 
     });
     kvs.map(c => {
       let valGeometry = c.valGeometry;
-      if (valGeometry) valGeometry['page'] = y;
+      if (valGeometry) valGeometry['page'] = y + 1;
       individualAnswerGeometryValue.set(c.key, valGeometry);
     });
 
